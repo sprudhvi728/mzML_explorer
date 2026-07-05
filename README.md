@@ -4,7 +4,6 @@ no peptide identification. no database search. just the instrument data.
 
 **Interactive raw mass spectrometry data inspection — no identification, no inference, just the instrument signal.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-black.svg)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-1.0.0-black.svg)](CHANGELOG.md)
 
@@ -209,20 +208,6 @@ All exports are generated client-side (scan table) or streamed directly from the
 
 ---
 
-## Example Dataset
-
-A ProteoWizard reference file (`tiny_pwiz.mzML`, ~25 KB) is included in `sample_data/` for immediate testing. This file is the official ProteoWizard test dataset containing 4 MS1/MS2 spectra and 2 chromatogram entries, and is widely used to validate mzML parsers.
-
-Real-world compatibility has been confirmed with:
-
-- **Waters LC-MS acquisition** (nativeID format `function=N process=N scan=N`) — tested with a 36 MB file containing 1,986 MS1 scans across a 20-minute gradient
-- Files from the **PRIDE** and **MassIVE** public repositories
-- Files converted by ProteoWizard 3.x from Thermo `.raw` format
-
-To test with your own data, any mzML file that passes `msconvert --check-utf8` validation should parse correctly.
-
----
-
 ## Biological Interpretation
 
 mzML Explorer reports acquisition-level instrument metadata, not identified biological entities. The values displayed reflect what the mass spectrometer measured during the experiment:
@@ -260,31 +245,13 @@ For full proteomics analysis pipelines, consider [FragPipe](https://fragpipe.nes
 
 ---
 
-## Citation
-
-```
-Prudhvi, S. (2025). mzML Explorer: A browser-based tool for interactive
-inspection of raw mass spectrometry data (Version 1.0.0) [Software].
-https://github.com/your-username/mzml-explorer
-```
-
-A CITATION.cff file is included in this repository for automated citation generation by GitHub and Zenodo.
-
-If you publish results obtained using data quality-controlled with mzML Explorer, please also cite the underlying libraries:
-
-- **pyteomics**: Goloborodko, A. A. *et al.* (2013). Pyteomics — a Python Framework for Exploratory Data Analysis and Rapid Software Prototyping in Proteomics. *Journal of The American Society for Mass Spectrometry*, 24(2), 301–304. https://doi.org/10.1007/s13361-012-0516-6
-- **FastAPI**: Ramírez, S. FastAPI. https://fastapi.tiangolo.com/
-- **Plotly**: Plotly Technologies Inc. Collaborative data science. Montréal, QC, 2015. https://plot.ly
-
----
-
 ## Roadmap
 
 The following features are planned for future releases. Community contributions toward any of these are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **v1.1 — Enhanced inspection**
 - [ ] Multi-file comparison view (overlay TIC traces from multiple acquisitions)
-- [ ] Scan-to-scan navigation from within the spectrum viewer (previous / next buttons)
+- [ ] Scan-to-scan navigation from within the spectrum viewer
 - [ ] Automatic detection and flagging of acquisition gaps in the chromatogram
 
 **v1.2 — Search result overlay**
@@ -302,12 +269,6 @@ The following features are planned for future releases. Community contributions 
 
 ---
 
-## Acknowledgements
-
-mzML Explorer was developed at the intersection of proteomics data infrastructure and reproducible science. Thanks to the HUPO Proteomics Standards Initiative for maintaining the mzML standard, the ProteoWizard team for msConvert and the reference test dataset, and the pyteomics development team for a robust and well-documented mzML parsing library.
-
----
-
 ## References
 
 1. Martens, L. *et al.* (2011). mzML — a Community Standard for Mass Spectrometry Data. *Molecular & Cellular Proteomics*, 10(1), R110.000133. https://doi.org/10.1074/mcp.R110.000133
@@ -322,6 +283,3 @@ mzML Explorer was developed at the intersection of proteomics data infrastructur
 
 ---
 
-## License
-
-mzML Explorer is released under the [MIT License](LICENSE). See LICENSE for full terms.
