@@ -190,9 +190,9 @@ The **↓ Download CSV** button exports the current filtered view as a flat-file
 
 ### Step 5 — Spectrum viewer
 
-Click any row in the scan table to load that scan's spectrum. The backend retrieves only that scan's m/z and intensity arrays using pyteomics indexed random access — the file is seeked directly to the correct byte offset without re-reading the entire file. Peaks are rendered as a vertical stick plot. For MS2 spectra, precursor m/z, charge state, and isolation window boundaries are displayed above the plot.
+Click any row in the scan table to load that scan's spectrum. The backend retrieves only that scan's m/z and intensity arrays using pyteomics-indexed random access — the file is sought directly to the correct byte offset without re-reading the entire file. Peaks are rendered as a vertical stick plot. For MS2 spectra, precursor m/z, charge state, and isolation window boundaries are displayed above the plot.
 
-Click **↓ Download CSV** to save the spectrum as a two-column (mz, intensity) table.
+Click **↓ Download CSV** to save the spectrum as a two-column table (mz, intensity).
 
 ---
 
@@ -232,14 +232,13 @@ mzML Explorer is designed for the **quality-control step that precedes computati
 - Confirming that the chromatographic gradient performed as expected
 - Inspecting individual spectra for signal quality before submitting to a search engine
 - Diagnosing acquisition artifacts (spray loss, column void, calibration drift) from the raw signal
-- Teaching students and newcomers the structure of an LC-MS/MS experiment
+
 
 mzML Explorer is **not** intended for:
 
 - Peptide or protein identification
 - Quantification (label-free, TMT, SILAC, or other)
 - Statistical analysis or differential expression
-- De novo sequencing
 
 For full proteomics analysis pipelines, consider [FragPipe](https://fragpipe.nesvilab.org/), [MaxQuant](https://www.maxquant.org/), [Proteome Discoverer](https://www.thermofisher.com/), or [Skyline](https://skyline.ms/).
 
