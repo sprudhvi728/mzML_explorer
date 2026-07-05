@@ -1,0 +1,2218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mzML Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─────────────────────────────────────────────
+       Root — monochromatic notebook palette.
+       Berry's coral (#e8785c) is the only color.
+    ───────────────────────────────────────────── */
+    :root {
+      --bg:      #ffffff;   /* white */
+      --surface: #f5f4f2;   /* slightly off-white surface */
+      --ink:     #1a1a18;   /* near-black body text */
+      --ink-2:   #4a4a46;   /* secondary text */
+      --ink-3:   #8a8a84;   /* tertiary / labels */
+      --ink-4:   #c4c0b8;   /* very light — decorative rules */
+      --rule:    #e4e0d8;   /* divider lines */
+
+      /* Accent — used sparingly for educational mode indicators */
+      --berry:      #e8785c;
+      --berry-pale: #fdf0ec;
+      --leaf:       #5c7c3c;
+
+      --font: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+      --mono: "IBM Plex Mono", "Courier New", monospace;
+      --max-w: 1060px;
+      --pad: 60px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      font-weight: 300;
+      font-size: 16px;
+      line-height: 1.68;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      padding-bottom: 48px;
+    }
+
+    /* ─────────────────────────────────────────────
+       Upload page
+    ───────────────────────────────────────────── */
+    #hero {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 88px 40px 72px;
+    }
+
+    #up-eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-3);
+      letter-spacing: 0.12em;
+      margin-bottom: 40px;
+    }
+
+    /* Drop zone */
+    #drop-zone {
+      width: 100%;
+      border: 1.5px dashed var(--rule);
+      padding: 52px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      position: relative;
+      background: #ffffff;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: var(--ink-3);
+      background: var(--surface);
+    }
+    #drop-zone.has-file {
+      border-style: solid;
+      border-color: var(--ink-4);
+    }
+    #drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    #drop-icon {
+      margin-bottom: 8px;
+      color: var(--ink-3);
+      transition: color 0.15s;
+    }
+    #drop-zone:hover #drop-icon, #drop-zone.drag-over #drop-icon { color: var(--ink-2); }
+    #drop-primary {
+      display: block;
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--ink);
+    }
+    #drop-secondary {
+      display: block;
+      font-size: 12px;
+      color: var(--ink-2);
+      font-family: var(--mono);
+    }
+
+    /* Selected file name */
+    #file-chosen {
+      display: none;
+      margin-top: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink);
+      word-break: break-all;
+    }
+    #file-chosen.visible { display: block; }
+
+    /* Inline error */
+    #upload-type-error {
+      display: none;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #9a3020;
+      font-weight: 300;
+      line-height: 1.55;
+    }
+    #upload-type-error.visible { display: block; }
+
+    /* Action row */
+    .up-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    #upload-btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      color: #ffffff;
+      background: var(--ink);
+      border: none;
+      padding: 11px 32px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s;
+    }
+    #upload-btn:hover    { background: var(--ink-2); }
+    #upload-btn:disabled { background: var(--ink-4); cursor: not-allowed; }
+
+    #reset-btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--ink);
+      background: transparent;
+      border: 1.5px solid var(--ink-2);
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    #reset-btn:hover:not(:disabled) { background: var(--surface); border-color: var(--ink); }
+    #reset-btn:disabled { color: var(--ink-4); border-color: var(--rule); cursor: default; }
+
+    /* Brief instructions */
+    .up-instructions {
+      margin-top: 36px;
+      font-size: 13px;
+      color: var(--ink-2);
+      font-weight: 300;
+      line-height: 1.75;
+    }
+    .up-instructions p {
+      margin-bottom: 6px;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .up-instructions p.revealed { opacity: 1; }
+
+    #upload-hint { display: none; } /* kept for JS compat */
+
+    /* ─────────────────────────────────────────────
+       Status bar
+    ───────────────────────────────────────────── */
+    #status-bar {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 8px var(--pad) 10px;
+      font-size: 13px;
+      color: var(--ink-3);
+      font-weight: 300;
+      border-top: 1px solid var(--rule);
+      min-height: 30px;
+    }
+    #status-bar.error { color: #9a3020; }
+
+    /* ─────────────────────────────────────────────
+       Panels
+    ───────────────────────────────────────────── */
+    .panel {
+      display: none;
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 52px var(--pad);
+      border-top: 1px solid var(--rule);
+    }
+    .panel.visible { display: block; }
+
+    .panel-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      color: var(--ink-3);
+      font-weight: 500;
+      letter-spacing: 0.1em;
+    }
+
+    /* ─────────────────────────────────────────────
+       Utility buttons
+    ───────────────────────────────────────────── */
+    .text-btn {
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink-2);
+      background: none;
+      border: 1.5px solid var(--rule);
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 5px 12px;
+      letter-spacing: 0.04em;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .text-btn:hover {
+      background: var(--surface);
+      border-color: var(--ink-4);
+      color: var(--ink);
+    }
+
+    .toggle-group {
+      display: flex;
+      border: 1px solid var(--rule);
+    }
+    .toggle-group .toggle-btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--ink-3);
+      background: var(--bg);
+      border: none;
+      border-left: 1px solid var(--rule);
+      padding: 6px 18px;
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      line-height: 1.6;
+    }
+    .toggle-group .toggle-btn:first-child { border-left: none; }
+    .toggle-group .toggle-btn.active { background: var(--ink); color: var(--bg); }
+    .toggle-group .toggle-btn:not(.active):hover { background: var(--surface); color: var(--ink-2); }
+
+    #spectrum-export-btn { display: none; }
+
+    /* ─────────────────────────────────────────────
+       Summary grid
+    ───────────────────────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 36px 48px;
+    }
+    .summary-cell .key {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--ink-2);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .summary-cell .value {
+      display: block;
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+    }
+    /* Filename cell spans full row and wraps gracefully */
+    .summary-cell.filename-cell {
+      grid-column: 1 / -1;
+    }
+    .summary-cell.filename-cell .value {
+      font-size: 14px;
+      overflow-wrap: break-word;
+      word-break: break-all;
+      line-height: 1.5;
+      color: var(--ink-2);
+    }
+
+    /* ─────────────────────────────────────────────
+       Chromatogram
+    ───────────────────────────────────────────── */
+    #chrom-plot { width: 100%; height: 220px; }
+    .chrom-notice {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--ink-3);
+      font-weight: 300;
+      line-height: 1.65;
+      padding: 10px 16px;
+      border-left: 2px solid var(--rule);
+      background: var(--surface);
+    }
+
+    /* ─────────────────────────────────────────────
+       Scan table
+    ───────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .filter-label { font-size: 13px; color: var(--ink-3); font-weight: 300; }
+    .rt-filter { display: flex; align-items: center; gap: 7px; }
+    .rt-filter input {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink);
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      padding: 5px 9px;
+      width: 76px;
+      -moz-appearance: textfield;
+      transition: border-color 0.12s;
+    }
+    .rt-filter input::-webkit-outer-spin-button,
+    .rt-filter input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .rt-filter input:focus { outline: 1px solid var(--ink-3); border-color: transparent; }
+    .rt-sep { font-size: 14px; color: var(--ink-3); }
+
+    #scan-search {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink);
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      padding: 5px 11px;
+      width: 150px;
+    }
+    #scan-search:focus { outline: 1px solid var(--ink-3); border-color: transparent; }
+
+    #table-scroll { height: 320px; overflow-y: auto; border-top: 1px solid var(--rule); }
+    #scan-table { width: 100%; border-collapse: collapse; }
+    #scan-table thead { position: sticky; top: 0; background: var(--bg); z-index: 1; }
+    #scan-table th {
+      padding: 10px 18px 9px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink-3);
+      text-align: right;
+      white-space: nowrap;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--rule);
+    }
+    #scan-table th:first-child { text-align: left; padding-left: 2px; }
+    #scan-table td {
+      padding: 8px 18px;
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-2);
+      text-align: right;
+      white-space: nowrap;
+    }
+    #scan-table td:first-child { padding-left: 2px; text-align: left; color: var(--ink); }
+    .scan-row { cursor: pointer; }
+    .scan-row:hover td { background: var(--surface); }
+    .scan-row.ms2 td:first-child { border-left: 2px solid var(--rule); padding-left: 0; }
+    .scan-row.selected td { background: #f0ede8; color: var(--ink); }
+    .scan-row.selected td:first-child { color: var(--ink); }
+
+    .empty-row {
+      text-align: center !important;
+      color: var(--ink-3) !important;
+      padding: 52px 16px !important;
+      font-size: 14px !important;
+      font-family: var(--font) !important;
+    }
+    #table-count-label { font-size: 13px; color: var(--ink-3); font-weight: 300; }
+
+    #table-pagination { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+    #page-label { font-size: 13px; color: var(--ink-3); }
+    .page-btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--ink-3);
+      background: none;
+      border: 1px solid var(--rule);
+      padding: 5px 16px;
+      cursor: pointer;
+      transition: color 0.1s, border-color 0.1s;
+    }
+    .page-btn:hover:not(:disabled) { color: var(--ink-2); border-color: var(--ink-3); }
+    .page-btn:disabled { color: var(--rule); border-color: var(--rule); cursor: default; }
+
+    /* ─────────────────────────────────────────────
+       Spectrum
+    ───────────────────────────────────────────── */
+    .spectrum-title-row { display: flex; align-items: center; gap: 12px; }
+    .ms2-badge {
+      display: none;
+      font-family: var(--font);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-3);
+      background: var(--surface);
+      padding: 2px 8px;
+      letter-spacing: 0.06em;
+    }
+    .spectrum-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 40px;
+      margin-bottom: 32px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .meta-item { display: flex; flex-direction: column; gap: 5px; }
+    .meta-key {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--ink-3);
+      font-weight: 400;
+      letter-spacing: 0.06em;
+    }
+    .meta-val { font-family: var(--mono); font-size: 17px; color: var(--ink); line-height: 1.3; }
+    .meta-item.precursor .meta-val { color: var(--ink-2); }
+
+    .spectrum-status {
+      display: none;
+      padding: 56px 0;
+      text-align: center;
+      font-size: 14px;
+      color: var(--ink-3);
+      font-weight: 300;
+    }
+    .spectrum-status.loading { display: block; }
+    .spectrum-status.error   { display: block; color: #9a3020; }
+    #spectrum-plot { width: 100%; height: 360px; }
+
+    /* ─────────────────────────────────────────────
+       Info icons (edu mode)
+    ───────────────────────────────────────────── */
+    .info-icon {
+      display: none;
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      color: var(--ink-3);
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 14px;
+      text-align: center;
+      font-family: var(--font);
+      flex-shrink: 0;
+      transition: background 0.12s, color 0.12s;
+    }
+    .info-icon:hover { background: var(--ink-4); color: var(--ink); }
+    body.edu-mode .info-icon { display: inline-block; }
+
+    /* ─────────────────────────────────────────────
+       Educational mode toggle
+    ───────────────────────────────────────────── */
+    #edu-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--ink-2);
+      background: transparent;
+      border: 1px solid var(--ink-3);
+      padding: 8px 18px;
+      cursor: pointer;
+      margin-top: 32px;
+      letter-spacing: 0.01em;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    #edu-toggle:hover { color: var(--ink); border-color: var(--ink-2); background: var(--surface); }
+    #edu-toggle.active {
+      color: var(--ink);
+      border-color: var(--ink);
+      background: var(--surface);
+    }
+    .edu-pip {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--ink-3);
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    #edu-toggle.active .edu-pip { background: var(--berry); }
+
+    /* ─────────────────────────────────────────────
+       Vendor modal
+    ───────────────────────────────────────────── */
+    #vendor-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26,26,24,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    #vendor-backdrop.visible { display: flex; }
+    .modal {
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      padding: 44px 48px;
+      max-width: 520px;
+      width: 90vw;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.12);
+    }
+    .modal-eyebrow { font-size: 12px; color: var(--ink-3); letter-spacing: 0.08em; margin-bottom: 14px; }
+    .modal-title { font-size: 22px; font-weight: 300; color: var(--ink); margin-bottom: 20px; }
+    .modal-body { font-size: 14px; color: var(--ink-2); line-height: 1.72; }
+    .modal-body p { margin-bottom: 12px; }
+    .modal-code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      padding: 12px 16px;
+      margin: 16px 0;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    .modal-actions { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+    .modal-btn-primary {
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--bg);
+      background: var(--ink);
+      border: none;
+      padding: 10px 26px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.15s;
+    }
+    .modal-btn-primary:hover { background: var(--ink-2); }
+    .modal-btn-secondary {
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--ink-2);
+      background: none;
+      border: 1px solid var(--rule);
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    .modal-btn-secondary:hover { color: var(--ink); border-color: var(--ink-3); }
+
+    /* ─────────────────────────────────────────────
+       Learning panel
+    ───────────────────────────────────────────── */
+    #learn-panel { display: none; max-width: var(--max-w); margin: 0 auto; border-top: 1px solid var(--rule); }
+    body.edu-mode #learn-panel { display: block; }
+    .learn-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px var(--pad);
+      cursor: pointer;
+      user-select: none;
+    }
+    .learn-header:hover { background: var(--surface); }
+    .learn-header-left { display: flex; align-items: center; gap: 10px; }
+    .learn-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--berry); flex-shrink: 0; }
+    .learn-label { font-size: 11px; font-weight: 500; color: var(--ink-3); letter-spacing: 0.1em; }
+    .learn-chevron { font-size: 11px; color: var(--ink-3); transition: transform 0.2s; }
+    .learn-chevron.open { transform: rotate(180deg); }
+    .learn-body { display: none; padding: 0 var(--pad) 48px; }
+    .learn-body.open { display: block; }
+    .learn-content { font-size: 14px; color: var(--ink-2); line-height: 1.78; max-width: 660px; }
+    .learn-content h3 { font-size: 15px; font-weight: 400; color: var(--ink); margin: 20px 0 8px; letter-spacing: 0.01em; }
+    .learn-content h3:first-child { margin-top: 0; }
+    .learn-content p { margin-bottom: 14px; }
+    .learn-content p:last-child { margin-bottom: 0; }
+    .learn-content strong { font-weight: 400; color: var(--ink); }
+
+    /* ─────────────────────────────────────────────
+       Notes popover (educational info icons)
+    ───────────────────────────────────────────── */
+    #berrys-notes {
+      display: none;
+      position: fixed;
+      z-index: 1500;
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      box-shadow: 0 6px 28px rgba(0,0,0,0.10);
+      max-width: 300px;
+      width: 90vw;
+      overflow: hidden;
+    }
+    #berrys-notes.visible { display: block; }
+
+    .bn-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--surface);
+    }
+    .bn-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-3);
+      letter-spacing: 0.08em;
+      flex: 1;
+    }
+    .bn-metric-name {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--ink);
+      display: block;
+      margin-bottom: 2px;
+    }
+    .bn-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--ink-3);
+      font-size: 15px;
+      line-height: 1;
+      padding: 0;
+    }
+    .bn-close:hover { color: var(--ink); }
+    .bn-body {
+      padding: 14px 16px 16px;
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.65;
+    }
+
+    /* ─────────────────────────────────────────────
+       Small file notice
+    ───────────────────────────────────────────── */
+    .chrom-notice {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--ink-3);
+      font-weight: 300;
+      line-height: 1.65;
+      padding: 10px 16px;
+      border-left: 2px solid var(--rule);
+      background: var(--surface);
+    }
+
+    /* ─────────────────────────────────────────────
+       Splash — full-screen intro animation
+    ───────────────────────────────────────────── */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: #ffffff;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.65s ease;
+    }
+    #splash.out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #splash-inner {
+      max-width: 580px;
+      width: 90%;
+      padding: 0 24px;
+    }
+    #splash-title {
+      font-family: var(--font);
+      font-size: 54px;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1.06;
+      color: var(--ink);
+      margin-bottom: 16px;
+      min-height: 115px;
+    }
+    #splash-title em {
+      font-style: normal;
+      color: var(--ink-3);
+    }
+    #splash-sub {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-3);
+      letter-spacing: 0.07em;
+      margin-bottom: 52px;
+      min-height: 18px;
+    }
+    #splash-start {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: #ffffff;
+      background: var(--ink);
+      border: none;
+      padding: 13px 40px;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.5s ease, transform 0.5s ease, background 0.15s;
+    }
+    #splash-start.on {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #splash-start:hover { background: var(--ink-2); }
+    #splash-skip {
+      position: absolute;
+      bottom: 28px;
+      right: 32px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-4);
+      background: none;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+    #splash-skip:hover { color: var(--ink-3); }
+    @keyframes cursor-blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    .sp-cursor {
+      display: inline-block;
+      width: 7px;
+      height: 1em;
+      background: var(--ink-3);
+      vertical-align: text-bottom;
+      margin-left: 2px;
+      animation: cursor-blink 0.9s step-start infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Splash screen ── -->
+  <div id="splash" role="presentation">
+    <div id="splash-inner">
+      <h1 id="splash-title"></h1>
+      <p id="splash-sub"></p>
+      <button id="splash-start">START ANALYSIS</button>
+    </div>
+    <button id="splash-skip">skip ↵</button>
+  </div>
+
+  <!-- ── Notes popover (educational info icons) ── -->
+  <div id="berrys-notes" role="tooltip" aria-live="polite">
+    <div class="bn-header">
+      <div>
+        <span class="bn-title">NOTES</span>
+        <span class="bn-metric-name" id="bn-metric-name"></span>
+      </div>
+      <button class="bn-close" id="bn-close" aria-label="Close">✕</button>
+    </div>
+    <div class="bn-body" id="bn-body"></div>
+  </div>
+
+  <!-- ── Vendor conversion modal ── -->
+  <div id="vendor-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <p class="modal-eyebrow">FORMAT NOT SUPPORTED</p>
+      <h2 class="modal-title">Convert to mzML first</h2>
+      <div class="modal-body" id="vendor-modal-body"></div>
+      <div class="modal-actions">
+        <a href="https://proteowizard.sourceforge.net/download.html" target="_blank"
+           rel="noopener" class="modal-btn-primary">Download ProteoWizard</a>
+        <button class="modal-btn-secondary" id="vendor-close-btn">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Hero / Upload ── -->
+  <section id="hero">
+    <p id="up-eyebrow">LC-MS/MS · RAW DATA EXPLORATION</p>
+
+    <label id="drop-zone" tabindex="0" aria-label="Select mzML file to upload">
+      <svg id="drop-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M18 4v20M10 16l8-8 8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6 28h24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span id="drop-primary">Drop an .mzML file here, or click to browse</span>
+      <span id="drop-secondary">.mzML format only · vendor formats require conversion</span>
+      <input type="file" id="file-input" accept=".mzML,.mzml,.raw,.RAW,.wiff,.WIFF,.wiff2">
+    </label>
+
+    <p id="file-chosen"></p>
+    <p id="upload-type-error"></p>
+
+    <div class="up-actions">
+      <button id="upload-btn" disabled>Analyze file</button>
+      <button id="reset-btn" disabled>Clear</button>
+    </div>
+
+    <p id="upload-hint"></p>
+
+    <div class="up-instructions">
+      <p id="up-instr-1">Inspect raw scans, chromatograms, and mass spectra — no peptide identification, no database search, no inference.</p>
+      <p id="up-instr-2">Need to convert a vendor file? Use <a href="https://proteowizard.sourceforge.io/" target="_blank" rel="noopener" style="color:var(--ink-2)">ProteoWizard msConvert</a>.</p>
+    </div>
+
+    <button id="edu-toggle">
+      <span class="edu-pip"></span>
+      Educational mode
+    </button>
+  </section>
+
+  <!-- ── Status bar ── -->
+  <div id="status-bar">No file loaded.</div>
+
+  <!-- ── File summary ── -->
+  <div id="summary-panel" class="panel">
+    <div class="panel-header">
+      <span class="section-label">File summary</span>
+      <button id="export-summary-btn" class="text-btn">↓ Download CSV</button>
+    </div>
+    <div id="summary-grid" class="summary-grid"></div>
+  </div>
+
+  <!-- ── Chromatogram ── -->
+  <div id="chrom-panel" class="panel">
+    <div class="panel-header">
+      <span class="section-label">Chromatogram</span>
+      <div id="chrom-toggle" class="toggle-group">
+        <button class="toggle-btn active" data-mode="tic">TIC</button>
+        <button class="toggle-btn" data-mode="bpc">Base peak</button>
+      </div>
+    </div>
+    <div id="chrom-plot"></div>
+    <p id="chrom-notice" class="chrom-notice" style="display:none;"></p>
+  </div>
+
+  <!-- ── Scan table ── -->
+  <div id="table-panel" class="panel">
+    <div class="panel-header">
+      <span class="section-label">Scans</span>
+      <div style="display:flex;gap:20px;align-items:center;">
+        <span id="table-count-label"></span>
+        <button id="export-scans-btn" class="text-btn">↓ Download CSV</button>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <div id="ms-filter" class="toggle-group">
+        <button class="toggle-btn active" data-ms="all">All</button>
+        <button class="toggle-btn" data-ms="1">MS1</button>
+        <button class="toggle-btn" data-ms="2">MS2</button>
+      </div>
+      <div class="rt-filter">
+        <span class="filter-label">RT</span>
+        <input type="number" id="rt-min" placeholder="min" step="0.001">
+        <span class="rt-sep">–</span>
+        <input type="number" id="rt-max" placeholder="max" step="0.001">
+        <span class="filter-label">min</span>
+      </div>
+      <input type="search" id="scan-search" placeholder="Search scan…">
+    </div>
+    <div id="table-scroll">
+      <table id="scan-table">
+        <thead>
+          <tr>
+            <th>Scan</th>
+            <th>RT (min)</th>
+            <th>MS level</th>
+            <th>TIC</th>
+            <th>Base peak</th>
+            <th>Precursor m/z</th>
+          </tr>
+        </thead>
+        <tbody id="scan-tbody"></tbody>
+      </table>
+    </div>
+    <div id="table-pagination">
+      <button id="page-prev" class="page-btn" disabled>← Prev</button>
+      <span id="page-label"></span>
+      <button id="page-next" class="page-btn" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- ── Spectrum ── -->
+  <div id="spectrum-panel" class="panel">
+    <div class="panel-header">
+      <div class="spectrum-title-row">
+        <span id="spectrum-title" class="section-label">Spectrum</span>
+        <span id="ms2-badge" class="ms2-badge">MS2</span>
+      </div>
+      <button id="spectrum-export-btn" class="text-btn">↓ Download CSV</button>
+    </div>
+    <div id="spectrum-meta" class="spectrum-meta"></div>
+    <div id="spectrum-status" class="spectrum-status"></div>
+    <div id="spectrum-plot"></div>
+  </div>
+
+  <!-- ── Learning panel (edu mode) ── -->
+  <div id="learn-panel">
+    <div class="learn-header" id="learn-header">
+      <div class="learn-header-left">
+        <span class="learn-pip"></span>
+        <span class="learn-label">FIELD NOTES</span>
+      </div>
+      <span class="learn-chevron" id="learn-chevron">▾</span>
+    </div>
+    <div class="learn-body" id="learn-body">
+      <div class="learn-content" id="learn-content"></div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * mzML Explorer
+     *
+     * Modules:
+     *  1.  Plotly theme
+     *  2.  App state & DOM refs
+     *  3.  Upload & reset
+     *  4.  Vendor detection
+     *  5.  Summary panel
+     *  6.  Scan table
+     *  7.  Spectrum viewer
+     *  8.  Chromatogram
+     *  9.  CSV helpers
+     *  10. Educational mode
+     *  11. Notes popover
+     *  12. Learning panel
+     *  13. Utilities
+     *  14. Hero decoration
+     */
+
+    // ═══════════════════════════════════════════════════════════════
+    // 1. PLOTLY THEME
+    // ═══════════════════════════════════════════════════════════════
+
+    const API       = "http://127.0.0.1:8000";
+    const PAGE_SIZE = 200;
+    const F_SANS    = '"IBM Plex Sans","Helvetica Neue",Arial,sans-serif';
+    const F_MONO    = '"IBM Plex Mono","Courier New",monospace';
+
+    const PT = {
+      paper_bgcolor: "#ffffff",
+      plot_bgcolor:  "#ffffff",
+      font: { family: F_SANS, size: 14, color: "#4a4a46" },
+      margin: { l: 108, r: 28, t: 18, b: 80 },
+      hoverlabel: {
+        font: { family: F_SANS, size: 13, color: "#1a1a18" },
+        bgcolor:     "#ffffff",
+        bordercolor: "#e4e0d8",
+        namelength:  -1,
+      },
+    };
+
+    function leftMargin(yMax) {
+      if (!yMax || yMax <= 0) return 108;
+      const e = Math.floor(Math.log10(Math.abs(yMax)));
+      return e >= 9 ? 136 : e >= 6 ? 122 : e >= 3 ? 110 : 108;
+    }
+
+    function ax(title, extra = {}) {
+      return {
+        title: {
+          text:     `<b>${title}</b>`,
+          standoff: 22,
+          font:     { family: F_SANS, size: 15, color: "#4a4a46" },
+        },
+        automargin:     true,
+        showgrid:       true,
+        gridcolor:      "#ece8e0",
+        gridwidth:      1,
+        linecolor:      "#d8d4cc",
+        linewidth:      1,
+        tickcolor:      "#d8d4cc",
+        ticks:          "outside",
+        ticklen:        5,
+        zeroline:       false,
+        tickfont:       { family: F_MONO, size: 13, color: "#6a6a64" },
+        exponentformat: "power",
+        ...extra,
+      };
+    }
+
+    const PC = {
+      displaylogo: false,
+      responsive:  true,
+      modeBarButtonsToRemove: [
+        "select2d","lasso2d","autoScale2d",
+        "hoverClosestCartesian","hoverCompareCartesian","toggleSpikelines",
+      ],
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // 2. APP STATE & DOM REFS
+    // ═══════════════════════════════════════════════════════════════
+
+    const state = {
+      sessionId:    null,
+      filename:     null,
+      summary:      null,
+      scans:        [],
+      scanMap:      new Map(),
+      chromMode:    "tic",
+      selectedScan: null,
+      tableFilter:  { msLevel: null, rtMin: null, rtMax: null, search: "" },
+      tablePage:    0,
+      eduMode:      false,
+      learnOpen:    true,
+    };
+
+    let spectrumAbortCtrl = null;
+
+    const fileInput      = document.getElementById("file-input");
+    const uploadBtn      = document.getElementById("upload-btn");
+    const resetBtn       = document.getElementById("reset-btn");
+    const uploadHint     = document.getElementById("upload-hint");
+    const statusBar      = document.getElementById("status-bar");
+    const summaryPanel   = document.getElementById("summary-panel");
+    const tablePanel     = document.getElementById("table-panel");
+    const spectrumPanel  = document.getElementById("spectrum-panel");
+    const chromPanel     = document.getElementById("chrom-panel");
+    const scanTbody      = document.getElementById("scan-tbody");
+    const pageLabel      = document.getElementById("page-label");
+    const pagePrev       = document.getElementById("page-prev");
+    const pageNext       = document.getElementById("page-next");
+    const countLabel     = document.getElementById("table-count-label");
+    const spectrumTitle  = document.getElementById("spectrum-title");
+    const ms2Badge       = document.getElementById("ms2-badge");
+    const spectrumMeta   = document.getElementById("spectrum-meta");
+    const spectrumStatus = document.getElementById("spectrum-status");
+    const spectrumPlot   = document.getElementById("spectrum-plot");
+    const spectrumExport = document.getElementById("spectrum-export-btn");
+    const eduToggle      = document.getElementById("edu-toggle");
+
+    const allPanels = [summaryPanel, tablePanel, spectrumPanel, chromPanel];
+
+    // ═══════════════════════════════════════════════════════════════
+    // 3. FILE SELECTION & VALIDATION
+    // ═══════════════════════════════════════════════════════════════
+
+    const dropZone   = document.getElementById("drop-zone");
+    const fileChosen = document.getElementById("file-chosen");
+    const typeError  = document.getElementById("upload-type-error");
+
+    function showFileError(msg) {
+      typeError.textContent = msg;
+      typeError.classList.add("visible");
+      fileChosen.classList.remove("visible");
+      dropZone.classList.remove("has-file");
+      uploadBtn.disabled = true;
+    }
+
+    function clearFileUI() {
+      typeError.classList.remove("visible");
+      fileChosen.classList.remove("visible");
+      dropZone.classList.remove("has-file");
+      uploadBtn.disabled = true;
+    }
+
+    function acceptFile(file) {
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (isVendorFormat(file.name)) {
+        showFileError(`"${file.name}" is a vendor raw file — convert to .mzML using ProteoWizard msConvert before uploading.`);
+        return;
+      }
+      if (ext !== "mzml") {
+        showFileError(`"${file.name}" is not an mzML file. Please select a file with the .mzML extension.`);
+        return;
+      }
+      typeError.classList.remove("visible");
+      fileChosen.textContent = `✓  ${file.name}`;
+      fileChosen.classList.add("visible");
+      dropZone.classList.add("has-file");
+      uploadBtn.disabled = false;
+    }
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) acceptFile(fileInput.files[0]);
+      else clearFileUI();
+    });
+
+    // Drag-and-drop
+    dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      try { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; } catch (_) {}
+      acceptFile(file);
+    });
+
+    dropZone.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // 4. UPLOAD & RESET
+    // ═══════════════════════════════════════════════════════════════
+
+    uploadBtn.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) { setStatus("No file selected.", true); return; }
+
+      setStatus(`Uploading ${file.name}…`);
+      uploadBtn.disabled = true;
+      resetBtn.disabled  = true;
+      allPanels.forEach(p => p.classList.remove("visible"));
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      let data;
+      try {
+        const resp = await fetch(`${API}/upload`, { method: "POST", body: formData });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+          throw new Error(err.detail || resp.statusText);
+        }
+        data = await resp.json();
+      } catch (err) {
+        setStatus(`Error: ${err.message}`, true);
+        uploadBtn.disabled = false;
+        resetBtn.disabled  = false;
+        return;
+      }
+
+      state.sessionId    = data.session_id;
+      state.filename     = data.filename;
+      state.summary      = data.summary;
+      state.scans        = data.scans;
+      state.scanMap      = new Map(data.scans.map(s => [s.spec_id, s]));
+      state.selectedScan = null;
+      state.tablePage    = 0;
+      resetTableFilters(true);
+
+      const s = data.summary;
+      setStatus(`Parsed ${s.total_scans.toLocaleString()} scans from ${data.filename}.`);
+      uploadBtn.disabled = false;
+      resetBtn.disabled  = false;
+
+      renderSummary(s, data.filename);
+      renderScanTable();
+      renderChromatogram();
+      updateLearningPanel();
+      summaryPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    resetBtn.addEventListener("click", resetApp);
+
+    async function resetApp() {
+      if (spectrumAbortCtrl) { spectrumAbortCtrl.abort(); spectrumAbortCtrl = null; }
+
+      if (state.sessionId) {
+        fetch(`${API}/session/${state.sessionId}`, { method: "DELETE" }).catch(() => {});
+      }
+
+      Object.assign(state, {
+        sessionId: null, filename: null, summary: null,
+        scans: [], scanMap: new Map(),
+        selectedScan: null, tablePage: 0, chromMode: "tic",
+      });
+      resetTableFilters(true);
+
+      fileInput.value = "";
+      clearFileUI();
+      resetBtn.disabled = true;
+      setStatus("No file loaded.");
+      allPanels.forEach(p => p.classList.remove("visible"));
+      updateLearningPanel();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 4. VENDOR FORMAT DETECTION
+    // ═══════════════════════════════════════════════════════════════
+
+    const VENDOR_FORMATS = {
+      raw:   { vendor: "Thermo Fisher", instrument: "Orbitrap / LTQ / Q Exactive" },
+      wiff:  { vendor: "SCIEX",         instrument: "TripleTOF / QTRAP / X500" },
+      wiff2: { vendor: "SCIEX",         instrument: "ZenoTOF / X500R" },
+    };
+
+    function isVendorFormat(filename) {
+      return (filename.split(".").pop().toLowerCase()) in VENDOR_FORMATS;
+    }
+
+    function showVendorModal(filename) {
+      const ext  = filename.split(".").pop().toLowerCase();
+      const info = VENDOR_FORMATS[ext] || { vendor: "a vendor instrument", instrument: "" };
+      const body = document.getElementById("vendor-modal-body");
+      body.innerHTML =
+        `<p>The file <strong>${escHtml(filename)}</strong> appears to be a ` +
+        `<strong>${escHtml(info.vendor)}</strong> raw data file ` +
+        `(${escHtml(info.instrument)}).</p>` +
+        `<p>mzML Explorer requires the open <strong>mzML format</strong>. ` +
+        `Use <strong>ProteoWizard msConvert</strong> — free, open-source, takes about ` +
+        `30 seconds per file.</p>` +
+        `<p>Example command:</p>` +
+        `<div class="modal-code">msconvert ${escHtml(filename)} --mzML --filter "peakPicking true 1-"</div>` +
+        `<p>Or open <strong>msConvertGUI</strong> for drag-and-drop. ` +
+        `Choose <em>Output format: mzML</em> and click Start.</p>`;
+      document.getElementById("vendor-backdrop").classList.add("visible");
+    }
+
+    document.getElementById("vendor-close-btn").addEventListener("click", () => {
+      document.getElementById("vendor-backdrop").classList.remove("visible");
+    });
+    document.getElementById("vendor-backdrop").addEventListener("click", e => {
+      if (e.target === document.getElementById("vendor-backdrop"))
+        document.getElementById("vendor-backdrop").classList.remove("visible");
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // 5. SUMMARY PANEL
+    // ═══════════════════════════════════════════════════════════════
+
+    function renderSummary(summary, filename) {
+      const grid = document.getElementById("summary-grid");
+      grid.innerHTML = "";
+
+      const rows = [
+        ["Filename",             filename,                                                                 null],
+        ["Total scans",          fmt(summary.total_scans),                                                null],
+        ["MS1 scans",            fmt(summary.ms1_scans),                                                  "ms1"],
+        ["MS2 scans",            fmt(summary.ms2_scans),                                                  "ms2"],
+        ["RT start (min)",       summary.rt_min        != null ? summary.rt_min.toFixed(3)        : "—", "rt"],
+        ["RT end (min)",         summary.rt_max        != null ? summary.rt_max.toFixed(3)        : "—", "rt"],
+        ["RT range (min)",       summary.rt_range_min  != null ? summary.rt_range_min.toFixed(3)  : "—", "rt"],
+        ["Avg scan rate (/min)", summary.avg_scan_rate != null ? summary.avg_scan_rate.toFixed(1) : "—", "scan_rate"],
+        ["Max TIC",              summary.max_tic       != null ? fmtSci(summary.max_tic)          : "—", "tic"],
+        ["Max base peak",        summary.max_base_peak != null ? fmtSci(summary.max_base_peak)    : "—", "bpi"],
+      ];
+
+      for (const [key, value, infoKey] of rows) {
+        const cell = document.createElement("div");
+        cell.className = "summary-cell" + (key === "Filename" ? " filename-cell" : "");
+        const icon = infoKey
+          ? `<button class="info-icon" data-info="${infoKey}" tabindex="-1" aria-label="Notes on ${key}">i</button>`
+          : "";
+        cell.innerHTML =
+          `<span class="key">${escHtml(key)}${icon}</span>` +
+          `<span class="value">${escHtml(String(value))}</span>`;
+        grid.appendChild(cell);
+      }
+
+      summaryPanel.classList.add("visible");
+    }
+
+    document.getElementById("export-summary-btn").addEventListener("click", () => {
+      if (!state.summary) return;
+      const s = state.summary;
+      const rows = [
+        ["metric","value"],
+        ["filename",state.filename],
+        ["total_scans",s.total_scans],
+        ["ms1_scans",s.ms1_scans],
+        ["ms2_scans",s.ms2_scans],
+        ["rt_start_min",s.rt_min],
+        ["rt_end_min",s.rt_max],
+        ["rt_range_min",s.rt_range_min],
+        ["avg_scan_rate_per_min",s.avg_scan_rate],
+        ["max_tic",s.max_tic],
+        ["max_base_peak",s.max_base_peak],
+      ];
+      downloadCSV(baseName() + "_summary.csv", buildCSV(rows));
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // 6. SCAN TABLE
+    // ═══════════════════════════════════════════════════════════════
+
+    function getFilteredScans() {
+      const { msLevel, rtMin, rtMax, search } = state.tableFilter;
+      const q = search.trim().toLowerCase();
+      return state.scans.filter(s => {
+        if (msLevel !== null && s.ms_level !== msLevel) return false;
+        if (rtMin   !== null && s.rt !== null && s.rt < rtMin) return false;
+        if (rtMax   !== null && s.rt !== null && s.rt > rtMax) return false;
+        if (q) {
+          if (!String(s.scan_num).includes(q) &&
+              !(s.spec_id || "").toLowerCase().includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function resetTableFilters(silent = false) {
+      state.tableFilter = { msLevel: null, rtMin: null, rtMax: null, search: "" };
+      state.tablePage   = 0;
+      document.querySelectorAll("#ms-filter .toggle-btn")
+        .forEach(b => b.classList.toggle("active", b.dataset.ms === "all"));
+      document.getElementById("rt-min").value      = "";
+      document.getElementById("rt-max").value      = "";
+      document.getElementById("scan-search").value = "";
+      if (!silent && state.scans.length) renderScanTable();
+    }
+
+    function renderScanTable() {
+      tablePanel.classList.add("visible");
+      const filtered  = getFilteredScans();
+      const total     = filtered.length;
+      const numPages  = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (state.tablePage >= numPages) state.tablePage = numPages - 1;
+      const start     = state.tablePage * PAGE_SIZE;
+      const end       = Math.min(start + PAGE_SIZE, total);
+      const page      = filtered.slice(start, end);
+      const selectedId = state.selectedScan ? state.selectedScan.spec_id : null;
+
+      countLabel.textContent = total === state.scans.length
+        ? `${total.toLocaleString()} scans`
+        : `${total.toLocaleString()} of ${state.scans.length.toLocaleString()} scans`;
+
+      if (page.length === 0) {
+        const msg = state.scans.length === 0 ? "No scans loaded." : "No scans match the current filters.";
+        scanTbody.innerHTML = `<tr><td colspan="6" class="empty-row">${msg}</td></tr>`;
+      } else {
+        scanTbody.innerHTML = page.map(s => {
+          const sel = s.spec_id === selectedId ? " selected" : "";
+          const ms2 = s.ms_level > 1 ? " ms2" : "";
+          return (
+            `<tr class="scan-row${sel}${ms2}" data-spec-id="${escHtml(s.spec_id)}">` +
+            `<td>${s.scan_num}</td>` +
+            `<td>${s.rt != null ? s.rt.toFixed(3) : "—"}</td>` +
+            `<td>${s.ms_level}</td>` +
+            `<td>${fmtSci(s.tic)}</td>` +
+            `<td>${fmtSci(s.base_peak)}</td>` +
+            `<td>${s.precursor_mz != null ? s.precursor_mz.toFixed(4) : "—"}</td>` +
+            `</tr>`
+          );
+        }).join("");
+      }
+
+      pagePrev.disabled = state.tablePage === 0;
+      pageNext.disabled = state.tablePage >= numPages - 1;
+      pageLabel.textContent = numPages > 1 ? `Page ${state.tablePage + 1} of ${numPages}` : "";
+    }
+
+    scanTbody.addEventListener("click", e => {
+      const row  = e.target.closest(".scan-row");
+      if (!row) return;
+      const scan = state.scanMap.get(row.dataset.specId);
+      if (!scan) return;
+      scanTbody.querySelector(".scan-row.selected")?.classList.remove("selected");
+      row.classList.add("selected");
+      state.selectedScan = scan;
+      onScanSelected(scan);
+    });
+
+    document.getElementById("ms-filter").addEventListener("click", e => {
+      const btn = e.target.closest(".toggle-btn");
+      if (!btn) return;
+      document.querySelectorAll("#ms-filter .toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.tableFilter.msLevel = btn.dataset.ms === "all" ? null : parseInt(btn.dataset.ms, 10);
+      state.tablePage = 0;
+      renderScanTable();
+    });
+
+    document.getElementById("rt-min").addEventListener("input", e => {
+      const v = parseFloat(e.target.value);
+      state.tableFilter.rtMin = isNaN(v) ? null : v;
+      state.tablePage = 0; renderScanTable();
+    });
+    document.getElementById("rt-max").addEventListener("input", e => {
+      const v = parseFloat(e.target.value);
+      state.tableFilter.rtMax = isNaN(v) ? null : v;
+      state.tablePage = 0; renderScanTable();
+    });
+    document.getElementById("scan-search").addEventListener("input", e => {
+      state.tableFilter.search = e.target.value;
+      state.tablePage = 0; renderScanTable();
+    });
+    pagePrev.addEventListener("click", () => { if (state.tablePage > 0) { state.tablePage--; renderScanTable(); } });
+    pageNext.addEventListener("click", () => { state.tablePage++; renderScanTable(); });
+
+    document.getElementById("export-scans-btn").addEventListener("click", () => {
+      if (!state.scans.length) return;
+      const filtered = getFilteredScans();
+      const rows = [
+        ["scan_num","rt_min","ms_level","tic","base_peak","precursor_mz","precursor_charge"],
+        ...filtered.map(s => [
+          s.scan_num, s.rt, s.ms_level, s.tic, s.base_peak,
+          s.precursor_mz ?? "", s.precursor_charge ?? "",
+        ]),
+      ];
+      downloadCSV(baseName() + (filtered.length < state.scans.length ? "_scans_filtered" : "_scans") + ".csv", buildCSV(rows));
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // 7. SPECTRUM VIEWER
+    // ═══════════════════════════════════════════════════════════════
+
+    async function onScanSelected(scan) {
+      setStatus(
+        `Scan ${scan.scan_num}  ·  RT ${scan.rt != null ? scan.rt.toFixed(3) : "—"} min` +
+        `  ·  MS${scan.ms_level}` +
+        (scan.precursor_mz != null ? `  ·  precursor ${scan.precursor_mz.toFixed(4)} m/z` : "")
+      );
+
+      if (spectrumAbortCtrl) spectrumAbortCtrl.abort();
+      spectrumAbortCtrl = new AbortController();
+
+      renderSpectrumMeta(scan);
+      spectrumPanel.classList.add("visible");
+      showSpectrumState("loading", "Loading spectrum…");
+
+      const url = `${API}/spectrum/${state.sessionId}/${encodeURIComponent(scan.spec_id)}`;
+      let data;
+      try {
+        const resp = await fetch(url, { signal: spectrumAbortCtrl.signal });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+          throw new Error(err.detail || resp.statusText);
+        }
+        data = await resp.json();
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        showSpectrumState("error", `Could not load spectrum: ${err.message}`);
+        return;
+      }
+
+      renderSpectrumPlot(data.mz, data.intensity, scan);
+      updateLearningPanel();
+    }
+
+    function renderSpectrumMeta(scan) {
+      spectrumTitle.textContent = `Spectrum — Scan ${scan.scan_num}`;
+      ms2Badge.style.display    = scan.ms_level > 1 ? "inline-block" : "none";
+
+      const items = [
+        ["Scan",      scan.scan_num,                                         "",          null],
+        ["RT",        scan.rt != null ? scan.rt.toFixed(3) + " min" : "—",  "",          "rt"],
+        ["MS level",  `MS${scan.ms_level}`,                                  "",          scan.ms_level > 1 ? "ms2" : "ms1"],
+        ["TIC",       fmtSci(scan.tic),                                      "",          "tic"],
+        ["Base peak", fmtSci(scan.base_peak),                                "",          "bpi"],
+      ];
+
+      if (scan.ms_level > 1) {
+        if (scan.precursor_mz != null)
+          items.push(["Precursor m/z", scan.precursor_mz.toFixed(4), "precursor", "precursor_mz"]);
+        if (scan.precursor_charge != null)
+          items.push(["Charge", `z = ${scan.precursor_charge}`, "precursor", "charge"]);
+        if (scan.iso_target != null) {
+          const lo = scan.iso_lower != null ? (scan.iso_target - scan.iso_lower).toFixed(2) : "?";
+          const hi = scan.iso_upper != null ? (scan.iso_target + scan.iso_upper).toFixed(2) : "?";
+          items.push(["Isolation", `${lo} – ${hi} m/z`, "precursor", "isolation"]);
+        }
+      }
+
+      spectrumMeta.innerHTML = items.map(([k, v, cls, infoKey]) => {
+        const icon = infoKey
+          ? `<button class="info-icon" data-info="${infoKey}" tabindex="-1" aria-label="Notes on ${k}">i</button>`
+          : "";
+        return (
+          `<div class="meta-item${cls ? " " + cls : ""}">` +
+            `<span class="meta-key">${escHtml(k)}${icon}</span>` +
+            `<span class="meta-val">${escHtml(String(v))}</span>` +
+          `</div>`
+        );
+      }).join("");
+
+      spectrumExport.style.display = "inline-block";
+      spectrumExport.onclick = () => downloadSpectrumCSV(scan);
+    }
+
+    function renderSpectrumPlot(mz, intensity, scan) {
+      showSpectrumState("ready");
+
+      const sx = [], sy = [];
+      for (let i = 0; i < mz.length; i++) { sx.push(mz[i], mz[i], null); sy.push(0, intensity[i], null); }
+
+      const stickTrace = {
+        type: "scatter", mode: "lines",
+        x: sx, y: sy,
+        line: { color: "#1a1a18", width: 0.8 },
+        hoverinfo: "skip", showlegend: false,
+      };
+      const tipTrace = {
+        type: "scatter", mode: "markers",
+        x: mz, y: intensity,
+        marker: { color: "rgba(0,0,0,0)", size: 8, line: { width: 0 } },
+        hovertemplate: "m/z %{x:.4f}<br>%{y:.4e}<extra></extra>",
+        showlegend: false,
+      };
+
+      const yMax = intensity.length ? Math.max(...intensity) : 1;
+      Plotly.react("spectrum-plot", [stickTrace, tipTrace], {
+        ...PT,
+        margin: { ...PT.margin, l: leftMargin(yMax) },
+        xaxis: ax("m/z", { exponentformat: "none" }),
+        yaxis: ax(scan.ms_level > 1 ? "Fragment intensity" : "Intensity", {
+          exponentformat: "power",
+          rangemode: "tozero",
+          range: [0, yMax * 1.10],
+        }),
+        showlegend: false,
+        hovermode: "closest",
+      }, PC);
+    }
+
+    function showSpectrumState(s, msg = "") {
+      spectrumStatus.textContent = msg;
+      spectrumStatus.className   = `spectrum-status${s !== "ready" ? " " + s : ""}`;
+      spectrumPlot.style.display = s === "ready" ? "" : "none";
+    }
+
+    function downloadSpectrumCSV(scan) {
+      const url = `${API}/export/spectrum/${state.sessionId}/${encodeURIComponent(scan.spec_id)}`;
+      const a = document.createElement("a");
+      a.href = url; a.download = `spectrum_scan${scan.scan_num}.csv`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 8. CHROMATOGRAM
+    // ═══════════════════════════════════════════════════════════════
+
+    function renderChromatogram() {
+      chromPanel.classList.add("visible");
+      // Reading offsetWidth forces a synchronous layout flush so Plotly gets
+      // the correct container dimensions even immediately after display:none→block.
+      void chromPanel.offsetWidth;
+
+      const isTic  = state.chromMode === "tic";
+      const yKey   = isTic ? "tic" : "base_peak";
+      const x = [], y = [], scanNums = [], msLevels = [];
+
+      for (const s of state.scans) {
+        if (s.rt == null || s.ms_level !== 1) continue;
+        x.push(s.rt);
+        y.push(s[yKey] ?? 0);
+        scanNums.push(s.scan_num);
+        msLevels.push(s.ms_level);
+      }
+
+      const n      = x.length;
+      const isTiny  = n > 0 && n < 20;
+      const isSmall = n > 0 && n < 25;
+
+      const yMax  = n ? Math.max(...y) : 1;
+      const yMin  = n ? Math.min(0, ...y) : 0;
+      const yPad  = (yMax - yMin) * 0.12;
+      const xMin  = n ? Math.min(...x) : 0;
+      const xMax  = n ? Math.max(...x) : 1;
+      const xSpan = xMax - xMin;
+      const xPad  = xSpan > 0 ? xSpan * (isTiny ? 0.22 : isSmall ? 0.12 : 0.08) : 0.5;
+
+      const textLabels = isTiny
+        ? x.map((_, i) =>
+            `  Scan ${scanNums[i]} · RT ${x[i].toFixed(3)} min · MS${msLevels[i]}`)
+        : [];
+
+      const chromColor = "#2a2a28";
+
+      const trace = {
+        type: "scatter",
+        mode: isTiny ? "lines+markers+text" : isSmall ? "lines+markers" : "lines",
+        x, y,
+        text:         textLabels,
+        textposition: "top right",
+        // omit keys entirely when undefined — Plotly 2.x throws on `'line' in undefined`
+        ...(isTiny ? { textfont: { family: F_SANS, size: 12, color: "#4a4a46" } } : {}),
+        cliponaxis:   false,
+        line: { color: chromColor, width: isSmall ? 1.8 : isTic ? 1.2 : 1.0,
+                dash: isTic ? "solid" : "dot" },
+        ...(isSmall ? { marker: {
+          color: chromColor, size: 9,
+          symbol: "circle",
+          line: { color: "#fafaf8", width: 1.5 },
+        } } : {}),
+        hovertemplate:
+          "Scan %{customdata[0]}<br>RT: %{x:.4f} min<br>%{customdata[1]}: %{y:.4e}<extra></extra>",
+        customdata: x.map((_, i) => [scanNums[i], isTic ? "TIC" : "BPI"]),
+        showlegend: false,
+      };
+
+      const annotations = [];
+      if (isSmall && !isTiny && n >= 1) {
+        const pts = n === 1 ? [0] : [0, n - 1];
+        pts.forEach((idx, j) => {
+          annotations.push({
+            x: x[idx], y: y[idx],
+            text: `Scan ${scanNums[idx]}<br>RT ${x[idx].toFixed(3)} min`,
+            showarrow: true,
+            arrowhead: 2, arrowsize: 1, arrowwidth: 1.5,
+            arrowcolor: chromColor,
+            ax: j === 0 ? 52 : -52, ay: -42,
+            font: { family: F_SANS, size: 12, color: "#1a1a18" },
+            bgcolor: "rgba(250,250,248,0.92)",
+            bordercolor: "#c4c0b8",
+            borderwidth: 1, borderpad: 5,
+          });
+        });
+      }
+
+      const plotEl = document.getElementById("chrom-plot");
+      plotEl.style.height = isTiny ? "280px" : "220px";
+
+      // Guard: if Plotly didn't load (CDN blocked/offline), show a clear message.
+      if (typeof Plotly === "undefined") {
+        plotEl.style.display = "flex";
+        plotEl.style.alignItems = "center";
+        plotEl.style.justifyContent = "center";
+        plotEl.style.color = "#8a8a84";
+        plotEl.style.fontSize = "14px";
+        plotEl.textContent = "Chart library failed to load — check your internet connection and reload.";
+        return;
+      }
+
+      try {
+        Plotly.react("chrom-plot", [trace], {
+          ...PT,
+          margin: { ...PT.margin, l: leftMargin(yMax) },
+          xaxis: ax("Retention time (min)", {
+            range: n > 0 ? [xMin - xPad, xMax + xPad] : undefined,
+            exponentformat: "none",
+          }),
+          yaxis: ax(isTic ? "Total ion current" : "Base peak intensity", {
+            range: [Math.max(0, yMin - yPad), yMax + yPad * (isTiny ? 2.5 : 1)],
+            exponentformat: "power",
+            rangemode: "nonnegative",
+          }),
+          annotations,
+          showlegend: false,
+          hovermode: n > 200 ? "x unified" : "closest",
+        }, PC);
+      } catch (err) {
+        console.error("Chromatogram render error:", err);
+        plotEl.style.display = "flex";
+        plotEl.style.alignItems = "center";
+        plotEl.style.color = "#8a8a84";
+        plotEl.style.fontSize = "14px";
+        plotEl.textContent = "Chromatogram render failed: " + err.message;
+        return;
+      }
+
+      const noticeEl = document.getElementById("chrom-notice");
+      if (n === 0) {
+        noticeEl.style.display = "";
+        noticeEl.textContent = "No MS1 scans with retention time data found in this file. " +
+          "The chromatogram cannot be displayed.";
+      } else if (isTiny) {
+        noticeEl.style.display = "";
+        noticeEl.textContent =
+          `This file contains only ${n} MS1 scan${n === 1 ? "" : "s"}. ` +
+          `The chromatogram is shown for demonstration purposes. ` +
+          `Real LC-MS runs typically contain thousands to tens of thousands of scans.`;
+      } else {
+        noticeEl.style.display = "none";
+      }
+    }
+
+    document.getElementById("chrom-toggle").addEventListener("click", e => {
+      const btn = e.target.closest(".toggle-btn");
+      if (!btn || !state.scans.length) return;
+      document.querySelectorAll("#chrom-toggle .toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.chromMode = btn.dataset.mode;
+      renderChromatogram();
+    });
+
+    window.addEventListener("resize", () => {
+      if (!state.scans.length) return;
+      Plotly.Plots.resize("chrom-plot");
+      if (state.selectedScan) Plotly.Plots.resize("spectrum-plot");
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // 9. CSV HELPERS
+    // ═══════════════════════════════════════════════════════════════
+
+    function buildCSV(rows) {
+      return rows.map(row =>
+        row.map(v => {
+          const s = v == null ? "" : String(v);
+          return (s.includes(",") || s.includes('"') || s.includes("\n"))
+            ? `"${s.replace(/"/g,'""')}"` : s;
+        }).join(",")
+      ).join("\r\n");
+    }
+
+    function downloadCSV(filename, content) {
+      const blob = new Blob([content], { type: "text/csv" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 10. EDUCATIONAL MODE
+    // ═══════════════════════════════════════════════════════════════
+
+    eduToggle.addEventListener("click", () => {
+      state.eduMode = !state.eduMode;
+      document.body.classList.toggle("edu-mode", state.eduMode);
+      eduToggle.classList.toggle("active", state.eduMode);
+      if (state.eduMode) {
+        updateLearningPanel();
+        if (!state.learnOpen) toggleLearnPanel();
+        // Scroll Field Notes into view
+        const lp = document.getElementById("learn-panel");
+        if (lp) setTimeout(() => lp.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+      }
+    });
+
+    // Info icon click — show Notes
+    document.addEventListener("click", e => {
+      const icon = e.target.closest(".info-icon");
+      if (icon) { e.stopPropagation(); showNotes(icon.dataset.info, icon); return; }
+      const notes = document.getElementById("berrys-notes");
+      if (!notes.contains(e.target)) hideNotes();
+    });
+
+    document.getElementById("bn-close").addEventListener("click", hideNotes);
+
+    // ═══════════════════════════════════════════════════════════════
+    // 11. NOTES POPOVER
+    // ═══════════════════════════════════════════════════════════════
+
+    const NOTES = {
+      rt: {
+        name: "Retention Time (RT)",
+        text: "Retention time is when a molecule leaves the chromatography column. Compounds that interact more strongly with the stationary phase take longer to elute. RT is measured in minutes and is reproducible within an experiment — it's one of the key identifiers used in targeted proteomics and metabolomics.",
+      },
+      tic: {
+        name: "Total Ion Current (TIC)",
+        text: "The TIC is the sum of all ion intensities detected in a single scan. Plotting it over retention time shows roughly how much material is entering the mass spectrometer at each moment. Large peaks generally correspond to abundant compounds eluting from the column, though ion suppression can complicate the picture.",
+      },
+      bpi: {
+        name: "Base Peak Intensity (BPI)",
+        text: "The base peak is the single most abundant ion in a scan. Unlike the TIC, it ignores all other ions. The base peak chromatogram is often cleaner than the TIC because it's not influenced by background noise from many small ions. A missing value ('—') means this field wasn't recorded in the file.",
+      },
+      ms1: {
+        name: "MS1 — Full Scan",
+        text: "An MS1 scan measures all ions present in the source at once — no pre-selection, no fragmentation. It produces a spectrum of intact precursor masses. In data-dependent acquisition (DDA), the instrument uses MS1 data to decide which ions to target for MS2 fragmentation in the next cycle.",
+      },
+      ms2: {
+        name: "MS2 — Fragmentation Scan",
+        text: "An MS2 scan begins by selecting one precursor ion from a preceding MS1 scan. That ion is then fragmented — usually by collision-induced dissociation (CID) or HCD. The resulting product ions form a fragmentation spectrum. For peptides, these patterns of b- and y-ions reveal the amino acid sequence.",
+      },
+      precursor_mz: {
+        name: "Precursor m/z",
+        text: "This is the mass-to-charge ratio of the ion I selected for fragmentation. Because electrospray adds one or more protons, the observed m/z is (M + z·H) / z, where M is the neutral mass and z is the charge state. From this, you can calculate the neutral mass if you know z.",
+      },
+      charge: {
+        name: "Charge State (z)",
+        text: "The charge state is the number of protons added to the molecule during electrospray ionization. A z = 2 ion appears at half the m/z of a z = 1 ion of the same molecule. Peptides typically carry 2–4 charges. Knowing z lets you calculate the true molecular mass: M = m/z × z − z × 1.0073.",
+      },
+      isolation: {
+        name: "Isolation Window",
+        text: "Before fragmentation, a quadrupole mass filter selects ions within a narrow m/z range — the isolation window. A narrower window gives cleaner fragmentation (fewer co-isolated species) but can miss some signal. A wider window captures more of the precursor peak but may co-fragment nearby contaminants.",
+      },
+      scan_rate: {
+        name: "Average Scan Rate",
+        text: "This is the number of scans acquired per minute of chromatographic time. Modern instruments running DDA may cycle through one MS1 and 10–30 MS2 scans per second. Faster cycling improves coverage of narrow LC peaks but each individual scan collects fewer ions, which can reduce sensitivity.",
+      },
+    };
+
+    function showNotes(key, anchorEl) {
+      const entry = NOTES[key];
+      if (!entry) return;
+
+      document.getElementById("bn-metric-name").textContent = entry.name;
+      document.getElementById("bn-body").textContent = entry.text;
+
+      const notes = document.getElementById("berrys-notes");
+      const pw    = 300;
+      const rect  = anchorEl.getBoundingClientRect();
+      let left    = rect.right + 10;
+      let top     = rect.top;
+
+      if (left + pw > window.innerWidth - 12) left = rect.left - pw - 10;
+      if (left < 12) left = 12;
+      if (top + 200 > window.innerHeight - 12) top = window.innerHeight - 200 - 12;
+      if (top < 12) top = 12;
+
+      notes.style.left = left + "px";
+      notes.style.top  = top  + "px";
+      notes.classList.add("visible");
+    }
+
+    function hideNotes() {
+      document.getElementById("berrys-notes").classList.remove("visible");
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 12. LEARNING PANEL
+    // ═══════════════════════════════════════════════════════════════
+
+    const learnHeader  = document.getElementById("learn-header");
+    const learnBody    = document.getElementById("learn-body");
+    const learnChevron = document.getElementById("learn-chevron");
+
+    learnHeader.addEventListener("click", toggleLearnPanel);
+
+    function toggleLearnPanel() {
+      state.learnOpen = !state.learnOpen;
+      learnBody.classList.toggle("open", state.learnOpen);
+      learnChevron.classList.toggle("open", state.learnOpen);
+    }
+
+    learnBody.classList.add("open");
+    learnChevron.classList.add("open");
+
+    function updateLearningPanel() {
+      const el = document.getElementById("learn-content");
+
+      if (!state.scans.length) {
+        el.innerHTML = `
+          <h3>What is mzML?</h3>
+          <p>mzML is the open XML standard for raw mass spectrometry data, maintained by the Proteomics Standards Initiative. It stores instrument metadata, every acquired spectrum, and the chromatographic trace in a single portable file.</p>
+          <h3>How LC-MS/MS works</h3>
+          <p>A sample is first separated by <strong>liquid chromatography</strong>. As compounds elute off the column over time, they enter the mass spectrometer. The instrument ionizes them and measures their mass-to-charge ratio (m/z), producing a time series of spectra — your mzML file.</p>
+          <h3>Getting started</h3>
+          <p>Select an mzML file and click <strong>Analyze file</strong>. I'll show you the file summary, a chromatogram, and a scan-by-scan table. Click any row to inspect that spectrum.</p>`;
+        return;
+      }
+
+      const scan = state.selectedScan;
+      const s    = state.summary;
+
+      if (!scan) {
+        const hasMs2 = s.ms2_scans > 0;
+        el.innerHTML = `
+          <h3>Your file</h3>
+          <p>This file contains <strong>${fmt(s.total_scans)} scans</strong> — ${fmt(s.ms1_scans)} MS1 spectra${hasMs2 ? ` and ${fmt(s.ms2_scans)} MS2 fragmentation spectra` : ""}. The acquisition spans <strong>${s.rt_range_min != null ? s.rt_range_min.toFixed(1) : "?"} minutes</strong>.</p>
+          <h3>Reading the chromatogram</h3>
+          <p>The chromatogram plots total ion current (TIC) or base peak intensity against retention time. Peaks correspond to analytes eluting from the LC column. A broad flat baseline suggests low-abundance background signal or an empty region of the gradient.</p>
+          ${hasMs2 ? `<h3>MS1 and MS2</h3><p>MS1 scans survey all ions in the source. MS2 scans fragment one selected precursor ion to produce a structural or sequence fingerprint. In data-dependent acquisition, the instrument alternates between MS1 surveys and MS2 events on the most abundant precursors detected.</p>` : ""}
+          <h3>Next step</h3>
+          <p>Click any row in the scan table to inspect its spectrum.</p>`;
+        return;
+      }
+
+      if (scan.ms_level === 1) {
+        el.innerHTML = `
+          <h3>MS1 spectrum — Scan ${scan.scan_num}</h3>
+          <p>This full-scan MS1 spectrum was acquired at RT <strong>${scan.rt != null ? scan.rt.toFixed(3) : "?"} min</strong>. Each stick represents an ion: its horizontal position is the m/z value, and its height is the signal intensity.</p>
+          <h3>What to look for</h3>
+          <p>In electrospray ionization, the same molecule often appears at multiple charge states. An ion at z = 2 appears at exactly half the m/z of its z = 1 counterpart. Identifying these isotope envelopes allows you to calculate the molecular mass.</p>
+          <h3>TIC for this scan: ${fmtSci(scan.tic)}</h3>
+          <p>This is the sum of all ion intensities. It gives a rough measure of how much ionized material entered the detector during this scan window.</p>`;
+      } else {
+        el.innerHTML = `
+          <h3>MS2 fragmentation spectrum — Scan ${scan.scan_num}</h3>
+          <p>This MS2 scan fragmented the precursor at <strong>m/z ${scan.precursor_mz != null ? scan.precursor_mz.toFixed(4) : "?"}</strong>${scan.precursor_charge != null ? `, charge z = ${scan.precursor_charge}` : ""}, acquired at RT ${scan.rt != null ? scan.rt.toFixed(3) : "?"} min.</p>
+          <h3>Interpreting the fragments</h3>
+          <p>For peptides, fragmentation along the peptide backbone produces <strong>b-ions</strong> (N-terminal) and <strong>y-ions</strong> (C-terminal). Mass differences between adjacent peaks correspond to amino acid residue masses, enabling sequence determination. For small molecules, product ions are structurally diagnostic fragments.</p>
+          ${scan.iso_target != null ? `<h3>Isolation window</h3><p>The quadrupole selected ions within approximately ±${scan.iso_lower != null ? scan.iso_lower.toFixed(1) : "?"} m/z of the target m/z ${scan.iso_target.toFixed(2)}. Any co-eluting species within this window are co-fragmented — a known source of chimeric spectra in complex samples.</p>` : ""}`;
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 13. UTILITIES
+    // ═══════════════════════════════════════════════════════════════
+
+    function setStatus(msg, isError = false) {
+      statusBar.textContent = msg;
+      statusBar.className   = isError ? "error" : "";
+    }
+
+    function baseName() {
+      return (state.filename || "mzml").replace(/\.mzML$/i, "");
+    }
+
+    function fmt(n) { return n != null ? n.toLocaleString() : "—"; }
+
+    // Format as "1.67 × 10⁷" using Unicode superscripts
+    function fmtSci(n) {
+      if (n == null || isNaN(n)) return "—";
+      if (n === 0) return "0";
+      const exp = Math.floor(Math.log10(Math.abs(n)));
+      const man = n / Math.pow(10, exp);
+      const sup = String(exp)
+        .replace(/-/g, "⁻")
+        .split("")
+        .map(c => "0123456789".includes(c) ? "⁰¹²³⁴⁵⁶⁷⁸⁹"[+c] : c)
+        .join("");
+      return `${man.toFixed(2)} × 10${sup}`;
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024)      return `${bytes} B`;
+      if (bytes < 1048576)   return `${(bytes / 1024).toFixed(1)} KB`;
+      if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
+      return `${(bytes / 1073741824).toFixed(2)} GB`;
+    }
+
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;").replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 14. HERO DECORATION
+    // ═══════════════════════════════════════════════════════════════
+    //
+    // Two subtle mass-spec motifs in the hero:
+    //   1. TIC chromatogram trace (top margin)
+    //   2. Spectrum stick pattern (right half)
+    //
+    // Both are hand-composed SVG at ≈7% opacity — data as wallpaper.
+
+    function initHeroDecor() {
+      const hero = document.getElementById("hero");
+      const W = hero.offsetWidth, H = hero.offsetHeight;
+
+      let _s = 0xC0FFEE42 | 0;
+      const rnd = () => {
+        _s = (_s + 0x6D2B79F5) | 0;
+        let t = Math.imul(_s ^ (_s >>> 15), 1 | _s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+
+      const NS  = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      svg.setAttribute("aria-hidden", "true");
+      svg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden;";
+
+      // TIC chromatogram
+      {
+        const BASELINE = 56, PEAK_MAX = 42;
+        const PEAKS = [[0.08,0.18,0.032],[0.22,0.42,0.042],[0.38,0.68,0.050],
+                       [0.50,1.00,0.056],[0.58,0.86,0.048],[0.67,0.55,0.042],
+                       [0.76,0.35,0.038],[0.87,0.20,0.030],[0.95,0.10,0.024]];
+        const pts = [];
+        for (let i = 0; i <= 420; i++) {
+          const t = i / 420; let yt = 0;
+          for (const [cx, ht, sig] of PEAKS) { const z = (t - cx) / sig; yt += ht * Math.exp(-z*z*0.5); }
+          pts.push(`${(t*W).toFixed(1)},${(BASELINE - yt*PEAK_MAX).toFixed(1)}`);
+        }
+        const path = document.createElementNS(NS, "path");
+        path.setAttribute("d", "M " + pts.join(" L "));
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", "#1a1a18");
+        path.setAttribute("stroke-width", "1");
+        path.setAttribute("opacity", "0.07");
+        svg.appendChild(path);
+      }
+
+      // Spectrum sticks
+      {
+        const X_START = W * 0.42, X_SPAN = W * 0.58;
+        const BASE_Y = H - 68, MAX_H = H * 0.76;
+        const g = document.createElementNS(NS, "g");
+        g.setAttribute("stroke", "#1a1a18");
+        g.setAttribute("stroke-width", "0.75");
+        g.setAttribute("opacity", "0.055");
+        for (let i = 0; i < 72; i++) {
+          const u  = rnd();
+          const xf = u < 0.18 ? rnd() * 0.15 : u < 0.48 ? 0.15 + rnd() * 0.28
+                   : u < 0.80 ? 0.43 + rnd() * 0.38 : 0.81 + rnd() * 0.19;
+          const x  = X_START + xf * X_SPAN;
+          const h  = Math.pow(rnd(), 2.6) * MAX_H;
+          const ln = document.createElementNS(NS, "line");
+          ln.setAttribute("x1", x.toFixed(1)); ln.setAttribute("y1", BASE_Y.toFixed(1));
+          ln.setAttribute("x2", x.toFixed(1)); ln.setAttribute("y2", (BASE_Y - h).toFixed(1));
+          g.appendChild(ln);
+        }
+        svg.appendChild(g);
+      }
+
+      hero.prepend(svg);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 15. SPLASH ANIMATION
+    // ═══════════════════════════════════════════════════════════════
+
+    function initSplash() {
+      // Characters used during the scramble phase
+      const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$@&!%+=|/<>~.:;-_\\';
+      const rnd    = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+
+      // Scramble `finalText` into `el` over `ms` milliseconds, then call `cb`
+      function scramble(el, finalText, ms, cb) {
+        const FPS    = 28;
+        const frames = Math.round((ms / 1000) * FPS);
+        let   f      = 0;
+        el.classList.add("on");
+
+        const ticker = setInterval(() => {
+          f++;
+          const locked = Math.floor((f / frames) * finalText.length);
+          let out = "";
+          for (let i = 0; i < finalText.length; i++) {
+            if (i < locked || finalText[i] === " " || finalText[i] === "\n") {
+              out += finalText[i];
+            } else {
+              out += rnd();
+            }
+          }
+          // Show blinking cursor while scrambling
+          el.innerHTML = escHtml(out) + (f < frames ? '<span class="sp-cursor"></span>' : "");
+
+          if (f >= frames) {
+            clearInterval(ticker);
+            el.innerHTML = escHtml(finalText);
+            el.classList.add("done");
+            if (cb) cb();
+          }
+        }, 1000 / FPS);
+
+        return ticker;
+      }
+
+      // ── Sequence definition ──────────────────────────────────────
+      const SUB_TEXT = "RAW INSTRUMENT DATA · ZERO INFERENCE";
+
+      const TITLE_DUR = 820;
+      const SUB_DUR   = 480;
+      const BTN_DELAY = 440;
+
+      let allTimers = [];
+      let done      = false;
+
+      function schedule(fn, delay) {
+        const id = setTimeout(fn, delay);
+        allTimers.push(id);
+        return id;
+      }
+
+      let cursor = 0;
+
+      // Title (has a newline → render as two lines in the h1)
+      schedule(() => {
+        const el = document.getElementById("splash-title");
+        const FPS = 28;
+        const frames = Math.round((TITLE_DUR / 1000) * FPS);
+        let f = 0;
+        const flat = "mzMLExplorer";
+        const full = "mzML\nExplorer";
+        el.innerHTML = "";
+        const ticker = setInterval(() => {
+          f++;
+          const locked = Math.floor((f / frames) * flat.length);
+          // Build two-line HTML with em on second word
+          const raw = full.split("\n");
+          let out0 = "", out1 = "";
+          for (let i = 0; i < raw[0].length; i++) {
+            out0 += i < Math.min(locked, raw[0].length) ? raw[0][i] : rnd();
+          }
+          const offset = raw[0].length;
+          for (let i = 0; i < raw[1].length; i++) {
+            out1 += (i + offset) < locked ? raw[1][i] : rnd();
+          }
+          const cursor = f < frames ? '<span class="sp-cursor"></span>' : "";
+          el.innerHTML = escHtml(out0) + "<br><em>" + escHtml(out1) + "</em>" + cursor;
+          if (f >= frames) {
+            clearInterval(ticker);
+            el.innerHTML = "mzML<br><em>Explorer</em>";
+          }
+        }, 1000 / FPS);
+        allTimers.push(ticker);
+      }, cursor);
+      cursor += TITLE_DUR + 160;
+
+      // Subtitle
+      schedule(() => {
+        const el = document.getElementById("splash-sub");
+        scramble(el, SUB_TEXT, SUB_DUR, null);
+      }, cursor);
+      cursor += SUB_DUR + BTN_DELAY;
+
+      // Button reveal
+      schedule(() => {
+        document.getElementById("splash-start").classList.add("on");
+        done = true;
+      }, cursor);
+
+      // ── Skip ────────────────────────────────────────────────────
+      function finishNow() {
+        if (done) return;
+        done = true;
+        allTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
+        document.getElementById("splash-title").innerHTML = "mzML<br><em>Explorer</em>";
+        const subEl = document.getElementById("splash-sub");
+        subEl.textContent = SUB_TEXT;
+        subEl.classList.add("on");
+        document.getElementById("splash-start").classList.add("on");
+      }
+
+      document.getElementById("splash-skip").addEventListener("click", finishNow);
+      // Click anywhere on splash (but not the start button) also skips
+      document.getElementById("splash").addEventListener("click", e => {
+        if (!done && e.target.id !== "splash-start") finishNow();
+      });
+
+      // ── Dismiss ─────────────────────────────────────────────────
+      document.getElementById("splash-start").addEventListener("click", () => {
+        const sp = document.getElementById("splash");
+        sp.classList.add("out");
+        setTimeout(() => sp.style.display = "none", 680);
+        setTimeout(runUploadAnim, 420); // start as splash fades
+      });
+
+      // Also trigger on skip / background click
+      document.getElementById("splash-skip").addEventListener("click", () => {
+        setTimeout(runUploadAnim, 80);
+      });
+      document.getElementById("splash").addEventListener("click", e => {
+        if (e.target.id !== "splash-start" && e.target.id !== "splash-skip") {
+          setTimeout(runUploadAnim, 80);
+        }
+      });
+    }
+
+    // ── Upload page text animation ────────────────────────────────────
+    let _uploadAnimDone = false;
+    function runUploadAnim() {
+      if (_uploadAnimDone) return;
+      _uploadAnimDone = true;
+
+      const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$@&!%+=|/<>~.:;-_\\';
+      const rnd = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+
+      function scrambleTo(el, plainText, ms, finalHTML, cb) {
+        const FPS = 28, frames = Math.round((ms / 1000) * FPS);
+        let f = 0;
+        el.classList.add("revealed");
+        const ticker = setInterval(() => {
+          f++;
+          const locked = Math.floor((f / frames) * plainText.length);
+          let out = "";
+          for (let i = 0; i < plainText.length; i++) {
+            const ch = plainText[i];
+            out += (i < locked || ch === " " || ch === "\n" || ch === "—" || ch === "?" || ch === ".") ? ch : rnd();
+          }
+          el.textContent = out;
+          if (f >= frames) {
+            clearInterval(ticker);
+            if (finalHTML) el.innerHTML = finalHTML; else el.textContent = plainText;
+            if (cb) cb();
+          }
+        }, 1000 / FPS);
+      }
+
+      const p1 = document.getElementById("up-instr-1");
+      const p2 = document.getElementById("up-instr-2");
+      if (!p1 || !p2) return;
+
+      const TEXT1 = "Inspect raw scans, chromatograms, and mass spectra — no peptide identification, no database search, no inference.";
+      const TEXT2 = "Need to convert a vendor file? Use ProteoWizard msConvert.";
+      const HTML2 = 'Need to convert a vendor file? Use <a href="https://proteowizard.sourceforge.io/" target="_blank" rel="noopener" style="color:var(--ink-2)">ProteoWizard msConvert</a>.';
+
+      scrambleTo(p1, TEXT1, 900, null, () => {
+        scrambleTo(p2, TEXT2, 560, HTML2, null);
+      });
+    }
+
+    // ── Initialise ──────────────────────────────────────────────────
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+
+    function init() {
+      initSplash();
+    }
+  </script>
+</body>
+</html>
