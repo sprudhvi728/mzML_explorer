@@ -215,7 +215,6 @@ mzML Explorer reports acquisition-level instrument metadata, not identified biol
 
 **Scan rate:** Average scans per minute reflects the duty cycle of the acquisition method. An unexpectedly low scan rate may indicate a malfunctioning dynamic exclusion setting or an overly narrow m/z range.
 
-> **mzML Explorer is a raw data inspection tool.** It does not perform peptide identification, protein inference, or statistical analysis. All biological interpretation of identified proteins must be performed using established database search and downstream analysis workflows.
 
 ---
 
