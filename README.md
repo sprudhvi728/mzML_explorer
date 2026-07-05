@@ -1,6 +1,8 @@
 # mzML_explorer
 a web application for inspecting raw mass spectrometry mzML files.
-no peptide identification. no database search. just the instrument data.
+no peptide identification. no database search. just instrument data.
+
+
 
 **Interactive raw mass spectrometry data inspection — no identification, no inference, just the instrument signal.**
 
@@ -13,9 +15,7 @@ no peptide identification. no database search. just the instrument data.
 
 Mass spectrometry experiments begin long before any peptide identification or statistical analysis. Every downstream inference — protein quantification, differential expression, post-translational modification calling — rests entirely on the quality of the raw instrument signal. Yet the tools available for inspecting that signal are either locked inside vendor software, require full pipeline installations, or present data through search-result lenses that collapse important acquisition-level information.
 
-In practice, researchers frequently need to answer simple but critical questions before committing to a full analysis run: *Did the instrument acquire the expected number of scans? Is the retention time range correct? Did TIC drop mid-run, suggesting a spray failure? Does a specific scan actually contain signal, or is it noise?* These questions require direct access to chromatograms, scan-level metadata, and individual spectra — all without the overhead of a complete proteomics pipeline.
-
-mzML Explorer fills this gap. It provides a lightweight, browser-based environment for inspecting the raw content of any mzML file: chromatograms, scan metadata, and mass spectra, in a format immediately readable by anyone familiar with LC-MS/MS acquisition. The goal is to accelerate the quality-control step that precedes every serious quantitative proteomics experiment.
+mzML Explorer inspects the raw content of any mzML file: chromatograms, scan metadata, and mass spectra to accelerate the quality-control (QC) step that precedes every serious quantitative proteomics experiment.
 
 ---
 
@@ -30,8 +30,7 @@ The application runs entirely on your local machine. No data ever leaves your co
 - Total Ion Chromatogram (TIC) and Base Peak Chromatogram (BPC) visualization
 - Paginated, filterable scan table with MS level, retention time, and precursor metadata
 - Interactive stick-plot spectrum viewer with per-peak hover details
-- One-click CSV export of summaries, scan metadata, and individual spectra
-- Memory-efficient handling of large files (tested up to several GB)
+- CSV export of summaries, scan metadata, and individual spectra
 
 ---
 
@@ -39,14 +38,10 @@ The application runs entirely on your local machine. No data ever leaves your co
 
 | Feature | Description |
 |---------|-------------|
-| **Vendor-agnostic** | Reads any mzML 1.1.0 file regardless of originating instrument or vendor |
-| **No installation overhead** | Single shell script (`run.sh`) creates a virtual environment and starts the server |
 | **Memory-efficient parsing** | Binary m/z/intensity arrays are never loaded during the scan index pass; only scalar metadata is stored |
-| **Indexed spectrum access** | Individual spectra are fetched by direct file offset seek — no full re-read on click |
 | **Interactive chromatogram** | Plotly-powered TIC and BPC with zoom, pan, hover, and linked scan navigation |
 | **Filterable scan table** | Filter by MS level, retention time range, or scan number; paginated at 200 rows |
 | **MS2 precursor details** | Precursor m/z, charge state, and isolation window displayed for each MS2 spectrum |
-| **Zero external dependencies** | No R, no conda, no Docker. Python 3.10+, a browser, and an internet connection for the CDN |
 | **Privacy by design** | All processing is local; no data is transmitted to any external server |
 
 ---
