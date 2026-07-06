@@ -4,7 +4,6 @@ no peptide identification. no database search. just instrument data.
 
 
 
-**Interactive raw mass spectrometry data inspection — no identification, no inference, just the instrument signal.**
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-black.svg)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-1.0.0-black.svg)](CHANGELOG.md)
