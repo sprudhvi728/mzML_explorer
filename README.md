@@ -240,30 +240,6 @@ For full proteomics analysis pipelines, consider [FragPipe](https://fragpipe.nes
 
 ---
 
-## Roadmap
-
-The following features are planned for future releases. Community contributions toward any of these are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-**v1.1 — Enhanced inspection**
-- [ ] Multi-file comparison view (overlay TIC traces from multiple acquisitions)
-- [ ] Scan-to-scan navigation from within the spectrum viewer
-- [ ] Automatic detection and flagging of acquisition gaps in the chromatogram
-
-**v1.2 — Search result overlay**
-- [ ] Optional overlay of PSM identifications from a [mzIdentML](https://www.psidev.info/mzidentml) or [pepXML](http://tools.proteomics.ucsd.edu/) file onto the spectrum viewer
-- [ ] Annotation of matched fragment ions (b/y series) in the stick plot
-
-**v1.3 — QC report generation**
-- [ ] Exportable PDF QC report summarizing acquisition metrics with embedded chromatogram figures
-- [ ] Batch processing mode: parse a directory of mzML files and produce a comparative QC table
-
-**v2.0 — Extended format support**
-- [ ] mzXML support
-- [ ] Direct reading of Thermo `.raw` files via [RawFileReader](https://github.com/thermofisher/rfd) (Windows only)
-- [ ] imzML support for mass spectrometry imaging datasets
-
----
-
 ## References
 
 1. Martens, L. *et al.* (2011). mzML — a Community Standard for Mass Spectrometry Data. *Molecular & Cellular Proteomics*, 10(1), R110.000133. https://doi.org/10.1074/mcp.R110.000133
