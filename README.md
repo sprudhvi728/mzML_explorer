@@ -52,7 +52,7 @@ The application runs entirely on your local machine. No data ever leaves your co
 
 ```
 Raw Instrument File                         mzML Explorer
-(.raw / .wiff / .d)                              │
+(.raw / .wiff / .d)                               │
         │                                         │
         ▼                                         │
   ProteoWizard                                    │
