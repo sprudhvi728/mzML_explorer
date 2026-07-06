@@ -9,6 +9,9 @@ no peptide identification. no database search. just instrument data.
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-black.svg)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-1.0.0-black.svg)](CHANGELOG.md)
 
+![Alt text](mzML_landing_page.png)
+
+
 ---
 
 ## Scientific Motivation
