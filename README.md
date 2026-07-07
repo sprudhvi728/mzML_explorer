@@ -27,13 +27,6 @@ mzML Explorer is a self-hosted web application for interactive inspection of raw
 
 The application runs entirely on your local machine. No data ever leaves your computer.
 
-**Core capabilities:**
-
-- Total Ion Chromatogram (TIC) and Base Peak Chromatogram (BPC) visualization
-- Paginated, filterable scan table with MS level, retention time, and precursor metadata
-- Interactive stick-plot spectrum viewer with per-peak hover details
-- CSV export of summaries, scan metadata, and individual spectra
-
 ---
 
 ## Key Features
@@ -95,7 +88,7 @@ Raw Instrument File                         mzML Explorer
 - **Internet connection** at page load (for Plotly.js CDN)
 - **A modern browser** (Chrome, Firefox, Safari, Edge)
 
-No conda environment, Docker container, or R installation is required. All Python dependencies are installed automatically.
+No R installation is required. All Python dependencies are installed automatically.
 
 ---
 
@@ -203,20 +196,6 @@ Click **↓ Download CSV** to save the spectrum as a two-column table (mz, inten
 
 All exports are generated client-side (scan table) or streamed directly from the local FastAPI server (summary and spectrum). No data is sent to any external service.
 
----
-
-## Biological Interpretation
-
-mzML Explorer reports acquisition-level instrument metadata, not identified biological entities. The values displayed reflect what the mass spectrometer measured during the experiment:
-
-**Total Ion Chromatogram (TIC):** The summed intensity of all ions detected in each MS1 scan across the gradient. A stable, bell-shaped TIC suggests consistent electrospray and uninterrupted chromatography. Sudden drops indicate spray instability, column void, or acquisition gaps.
-
-**Base Peak Chromatogram (BPC):** The intensity of the single most abundant ion per scan. The BPC is more sensitive to discrete high-abundance species and often reveals co-eluting contaminants that the TIC obscures.
-
-**MS2 precursor m/z and isolation window:** These values define exactly which peptide precursor ion was selected for fragmentation. Comparing the isolation window against the chromatogram helps identify whether co-isolation of interfering species is likely — a critical quality consideration for TMT/iTRAQ isobaric labeling experiments.
-
-**Scan rate:** Average scans per minute reflects the duty cycle of the acquisition method. An unexpectedly low scan rate may indicate a malfunctioning dynamic exclusion setting or an overly narrow m/z range.
-
 
 ---
 
@@ -227,7 +206,6 @@ mzML Explorer is designed for the **quality-control step that precedes computati
 - Verifying that an acquisition ran to completion with the expected number of scans
 - Confirming that the chromatographic gradient performed as expected
 - Inspecting individual spectra for signal quality before submitting to a search engine
-- Diagnosing acquisition artifacts (spray loss, column void, calibration drift) from the raw signal
 
 
 mzML Explorer is **not** intended for:
