@@ -8,12 +8,10 @@ no peptide identification. no database search. just instrument data.
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-black.svg)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-1.0.0-black.svg)](CHANGELOG.md)
 
-![Alt text](mzML_landing_page.png)
-
 
 ---
 
-## Scientific Motivation
+## scientific motivation
 
 Mass spectrometry experiments begin long before any peptide identification or statistical analysis. Every downstream inference — protein quantification, differential expression, post-translational modification calling — rests entirely on the quality of the raw instrument signal. Yet the tools available for inspecting that signal are either locked inside vendor software, require full pipeline installations, or present data through search-result lenses that collapse important acquisition-level information.
 
@@ -21,7 +19,7 @@ mzML Explorer inspects the raw content of any mzML file: chromatograms, scan met
 
 ---
 
-## Overview
+## overview
 
 mzML Explorer is a self-hosted web application for interactive inspection of raw mass spectrometry data in the mzML open format. It parses any mzML 1.1.0-compliant file — including files converted from Thermo `.raw`, Waters `.raw`/`.wiff`, Bruker `.d`, and other vendor formats via ProteoWizard — and presents the acquisition metadata as a navigable, interactive interface.
 
@@ -29,7 +27,7 @@ The application runs entirely on your local machine. No data ever leaves your co
 
 ---
 
-## Key Features
+## key features
 
 | Feature | Description |
 |---------|-------------|
@@ -41,7 +39,7 @@ The application runs entirely on your local machine. No data ever leaves your co
 
 ---
 
-## Workflow
+## workflow
 
 ```
 Raw Instrument File                         mzML Explorer
@@ -81,7 +79,7 @@ Raw Instrument File                         mzML Explorer
 
 ---
 
-## Requirements
+## requirements
 
 - **Python** 3.10 or newer
 - **pip** (bundled with Python)
@@ -91,7 +89,7 @@ No R installation is required. All Python dependencies are installed automatical
 
 ---
 
-## Installation
+## installation
 
 ```bash
 # Clone the repository
@@ -107,11 +105,11 @@ chmod +x run.sh
 
 Then open **http://127.0.0.1:8000** in your browser.
 
-> **Important:** Open `http://127.0.0.1:8000` in your browser. Do **not** open `frontend/index.html` directly — it must be served through the backend for API calls to work.
+> **IMPORTANT:** Open `http://127.0.0.1:8000` in your browser. Do **not** open `frontend/index.html` directly — it must be served through the backend for API calls to work.
 
 ---
 
-## Required Input Format
+## required input format
 
 mzML Explorer accepts files in the **mzML 1.1.0** open format, maintained by the HUPO Proteomics Standards Initiative (HUPO-PSI). Both indexed and non-indexed mzML files are supported.
 
@@ -124,7 +122,7 @@ Most mass spectrometry data acquisition software produces proprietary binary for
 | `.d` (Bruker) | timsTOF, maXis | standard conversion |
 | `.lcd` (Shimadzu) | LCMS series | standard conversion |
 
-**Example msConvert command:**
+**example msConvert command:**
 
 ```bash
 msconvert sample.raw --mzML --filter "peakPicking true 1-" -o ./output/
@@ -134,15 +132,19 @@ Files produced by the ProteoWizard test suite and the PRIDE/MassIVE public repos
 
 ---
 
-## Analysis Pipeline
+## analysis pipeline
+<p align="center">
+        <img width="75%" height="75%" alt="mzML-demo" src="https://github.com/user-attachments/assets/6cd4c9b9-ea4f-4839-aa83-eac32c10d086" />
+</p>
 
-### Step 1 — Upload and parse
+
+### step 1 — upload and parse
 
 Click **"Drop an .mzML file here, or click to browse"** and select your file, then click **"Analyze file"**. The backend streams the file to a temporary directory in 4 MB chunks, then makes a single sequential pass through all spectra to build a lightweight scan index. Only scalar metadata (scan number, retention time, MS level, TIC, base peak intensity, precursor m/z) is stored. Raw m/z and intensity arrays are not decoded at this stage.
 
 Parsing a 36 MB Waters LC-MS file containing ~2,000 MS1 scans typically completes in 2–5 seconds.
 
-### Step 2 — File summary
+### step 2 — file summary
 
 After parsing, a summary grid displays:
 
@@ -155,11 +157,11 @@ After parsing, a summary grid displays:
 
 Click **↓ Download CSV** to save the summary.
 
-### Step 3 — Chromatogram
+### step 3 — chromatogram
 
 The Total Ion Chromatogram (TIC) is plotted immediately after parsing. Toggle to **Base peak** to view the Base Peak Chromatogram (BPC). Both plots support zoom, pan, and per-point hover displaying scan number, retention time, and signal intensity.
 
-### Step 4 — Scan table
+### step 4 — scan table
 
 All scans are listed in a paginated, filterable table (200 rows per page). Available filters:
 
@@ -169,7 +171,7 @@ All scans are listed in a paginated, filterable table (200 rows per page). Avail
 
 The **↓ Download CSV** button exports the current filtered view as a flat-file table of scan metadata.
 
-### Step 5 — Spectrum viewer
+### step 5 — spectrum viewer
 
 Click any row in the scan table to load that scan's spectrum. The backend retrieves only that scan's m/z and intensity arrays using pyteomics-indexed random access — the file is sought directly to the correct byte offset without re-reading the entire file. Peaks are rendered as a vertical stick plot. For MS2 spectra, precursor m/z, charge state, and isolation window boundaries are displayed above the plot.
 
@@ -177,7 +179,7 @@ Click **↓ Download CSV** to save the spectrum as a two-column table (mz, inten
 
 ---
 
-## Downloadable Outputs
+## downloadable outputs
 
 | Output | Format | Contents |
 |--------|--------|----------|
@@ -190,7 +192,7 @@ All exports are generated client-side (scan table) or streamed directly from the
 
 ---
 
-## Intended Use and Scope
+## intended use and scope
 
 mzML Explorer is designed for the **quality-control step that precedes computational proteomics analysis**. It is appropriate for:
 
@@ -209,7 +211,7 @@ For full proteomics analysis pipelines, consider [FragPipe](https://fragpipe.nes
 
 ---
 
-## References
+## references
 
 1. Martens, L. *et al.* (2011). mzML — a Community Standard for Mass Spectrometry Data. *Molecular & Cellular Proteomics*, 10(1), R110.000133. https://doi.org/10.1074/mcp.R110.000133
 
