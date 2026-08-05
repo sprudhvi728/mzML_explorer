@@ -85,8 +85,7 @@ Raw Instrument File                         mzML Explorer
 
 - **Python** 3.10 or newer
 - **pip** (bundled with Python)
-- **Internet connection** at page load (for Plotly.js CDN)
-- **A modern browser** (Chrome, Firefox, Safari, Edge)
+- **Internet connection** (for Plotly.js CDN)
 
 No R installation is required. All Python dependencies are installed automatically.
 
@@ -107,14 +106,6 @@ chmod +x run.sh
 ```
 
 Then open **http://127.0.0.1:8000** in your browser.
-
-The `run.sh` script will:
-1. Verify Python 3.10+ is available
-2. Create a virtual environment at `.venv/` (first run only, ~30 seconds)
-3. Install all dependencies from `backend/requirements.txt`
-4. Start the FastAPI/uvicorn server with hot-reload enabled
-
-Press `Ctrl+C` in the terminal to stop the server.
 
 > **Important:** Open `http://127.0.0.1:8000` in your browser. Do **not** open `frontend/index.html` directly — it must be served through the backend for API calls to work.
 
