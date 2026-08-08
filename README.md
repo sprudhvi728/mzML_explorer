@@ -11,10 +11,10 @@ no peptide identification. no database search. just instrument data.
 ---
 
 ## overview
-Mass spectrometry has recently emerged as a major discovery tool in the life sciences. As an analytical tool, it is used to analyze the molecular composition of biological samples by ionizing analyte molecules and then measuring the m/z ratios of the resulting ions. The data from an MS experiment consists of mass spectra that can be used to identify and quantify biomolecules of interest. The resulting spectra and resulting metadata are then processed by specialized software packages (DIA-NN, FragPipe) to identify sampled ions. The inherent variability introduced by different MS instruments and experimental conditions tends to affect downstream analysis, integration, and comparison of datasets originating from different experiments. To standardize data, the Human Proteome Organization (HUPO) Proteomics Standards Initiative (PSI) established the mzML standard open-source format. 
+Mass spectrometry has been a major discovery tool in the life sciences. As an analytical tool, it is used to analyze the molecular composition of biological samples by ionizing analyte molecules and then measuring the m/z ratios of ions. The resulting spectra and metadata are then processed by specialized software packages (DIA-NN, FragPipe) to identify sampled ions. Vendor-specific formats complicate direct inspection and cross-platform access to raw files. To standardize data, the Human Proteome Organization (HUPO) Proteomics Standards Initiative (PSI) established the mzML standard open-source format. 
 
 
-mzML Explorer is a self-hosted web application for interactive inspection of raw mass spectrometry data in the mzML open format. It parses any mzML 1.1.0-compliant file — including files converted from Thermo `.raw`, Waters `.raw`/`.wiff`, Bruker `.d`, and other vendor formats via ProteoWizard — and presents the acquisition metadata as a navigable, interactive interface.
+mzML Explorer a lightweight interface for interactive inspection of raw mass spectrometry data in the mzML open format prior to downstream identification or quantification. It parses any mzML 1.1.0-compliant file — including files converted from Thermo `.raw`, Waters `.raw`/`.wiff`, Bruker `.d`, and other vendor formats via ProteoWizard — and presents the acquisition metadata as a navigable, interactive interface. Users can examine acquisition-level metadata, chromatographic signal, scan structure, precursor information, and individual spectra without submitting the data to a search engine.
 
 The application runs entirely on your local machine. No data ever leaves your computer.
 
@@ -121,8 +121,6 @@ Most mass spectrometry data acquisition software produces proprietary binary for
 msconvert sample.raw --mzML --filter "peakPicking true 1-" -o ./output/
 ```
 
-Files produced by the ProteoWizard test suite and the PRIDE/MassIVE public repositories are confirmed compatible.
-
 ---
 
 ## analysis pipeline
@@ -201,6 +199,15 @@ mzML Explorer is **not** intended for:
 - Statistical analysis or differential expression
 
 For full proteomics analysis pipelines, consider [FragPipe](https://fragpipe.nesvilab.org/), [MaxQuant](https://www.maxquant.org/), [Proteome Discoverer](https://www.thermofisher.com/), or [Skyline](https://skyline.ms/).
+
+## limitations
+- Performance with very large mzML files
+- Centroided vs. profile spectra
+- Vendor metadata that may not survive conversion
+- Whether ion mobility data are supported
+- Whether DIA acquisition metadata are fully represented
+- Browser/server memory considerations
+- Tested mzML variants/instruments
 
 ---
 
