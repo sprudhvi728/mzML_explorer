@@ -8,18 +8,11 @@ no peptide identification. no database search. just instrument data.
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-black.svg)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-1.0.0-black.svg)](CHANGELOG.md)
 
-
----
-
-## scientific motivation
-
-Mass spectrometry experiments begin long before any peptide identification or statistical analysis. Every downstream inference — protein quantification, differential expression, post-translational modification calling — rests entirely on the quality of the raw instrument signal. Yet the tools available for inspecting that signal are either locked inside vendor software, require full pipeline installations, or present data through search-result lenses that collapse important acquisition-level information.
-
-mzML Explorer inspects the raw content of any mzML file: chromatograms, scan metadata, and mass spectra to accelerate the quality-control (QC) step that precedes every serious quantitative proteomics experiment.
-
 ---
 
 ## overview
+Mass spectrometry has recently emerged as a major discovery tool in the life sciences. As an analytical tool, it is used to analyze the molecular composition of biological samples by ionizing analyte molecules and then measuring the m/z ratios of the resulting ions. The data from an MS experiment consists of mass spectra that can be used to identify and quantify biomolecules of interest. The resulting spectra and resulting metadata are then processed by specialized software packages (DIA-NN, FragPipe) to identify sampled ions. The inherent variability introduced by different MS instruments and experimental conditions tends to affect downstream analysis, integration, and comparison of datasets originating from different experiments. To standardize data, the Human Proteome Organization (HUPO) Proteomics Standards Initiative (PSI) established the mzML standard open-source format. 
+
 
 mzML Explorer is a self-hosted web application for interactive inspection of raw mass spectrometry data in the mzML open format. It parses any mzML 1.1.0-compliant file — including files converted from Thermo `.raw`, Waters `.raw`/`.wiff`, Bruker `.d`, and other vendor formats via ProteoWizard — and presents the acquisition metadata as a navigable, interactive interface.
 
