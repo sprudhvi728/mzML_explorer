@@ -131,7 +131,9 @@ msconvert sample.raw --mzML --filter "peakPicking true 1-" -o ./output/
 
 ### step 1 — upload and parse
 
-Click **"Drop an .mzML file here, or click to browse"** and select your file, then click **"Analyze file"**. The backend streams the file to a temporary directory in 4 MB chunks, then makes a single sequential pass through all spectra to build a lightweight scan index. Only scalar metadata (scan number, retention time, MS level, TIC, base peak intensity, precursor m/z) is stored. Raw m/z and intensity arrays are not decoded at this stage.
+Click **"Drop an .mzML file here, or click to browse"** and select your file, then click **"Analyze file"**. 
+
+The backend streams the file to a temporary directory in 4 MB chunks, then makes a pass through all spectra to build a lightweight scan index. It stores only scalar metadata (scan number, retention time, MS level, TIC, base peak intensity, precursor m/z). Raw m/z and intensity arrays are not decoded at this stage.
 
 Parsing a 36 MB Waters LC-MS file containing ~2,000 MS1 scans typically completes in 2–5 seconds.
 
@@ -150,7 +152,7 @@ Click **↓ Download CSV** to save the summary.
 
 ### step 3 — chromatogram
 
-The Total Ion Chromatogram (TIC) is plotted immediately after parsing. Toggle to **Base peak** to view the Base Peak Chromatogram (BPC). Both plots support zoom, pan, and per-point hover displaying scan number, retention time, and signal intensity.
+The Total Ion Chromatogram (TIC) is plotted immediately after parsing. Toggle to **Base peak** to view the Base Peak Chromatogram (BPC). Both plots support zoom, pan, and per-point hover, displaying scan number, retention time, and signal intensity.
 
 ### step 4 — scan table
 
@@ -164,7 +166,9 @@ The **↓ Download CSV** button exports the current filtered view as a flat-file
 
 ### step 5 — spectrum viewer
 
-Click any row in the scan table to load that scan's spectrum. The backend retrieves only that scan's m/z and intensity arrays using pyteomics-indexed random access — the file is sought directly to the correct byte offset without re-reading the entire file. Peaks are rendered as a vertical stick plot. For MS2 spectra, precursor m/z, charge state, and isolation window boundaries are displayed above the plot.
+Click any row in the scan table to load that scan's spectrum. 
+
+The tool retrieves only that scan's m/z and intensity arrays using pyteomics-indexed random access. For MS2 spectra, precursor m/z, charge state, and isolation window boundaries are displayed above the plot.
 
 Click **↓ Download CSV** to save the spectrum as a two-column table (mz, intensity).
 
@@ -178,12 +182,12 @@ Click **↓ Download CSV** to save the spectrum as a two-column table (mz, inten
 | Scan table | CSV | Per-scan: scan number, RT, MS level, TIC, base peak, precursor m/z, charge |
 | Spectrum | CSV | Per-peak: m/z, intensity |
 
-All exports are generated client-side (scan table) or streamed directly from the local FastAPI server (summary and spectrum). No data is sent to any external service.
+All exports are generated in a scan table or streamed directly from the local FastAPI server (summary and spectrum). No data is sent to any external service.
 
 
 ---
 
-## intended use and scope
+## intended use
 
 mzML Explorer is designed for the **quality-control step that precedes computational proteomics analysis**. It is appropriate for:
 
@@ -208,6 +212,8 @@ For full proteomics analysis pipelines, consider [FragPipe](https://fragpipe.nes
 - Whether DIA acquisition metadata are fully represented
 - Browser/server memory considerations
 - Tested mzML variants/instruments
+
+This tool was developed with AI-assisted coding (Claude Code); the tool design, analysis workflows, and statistical logic are my own.
 
 ---
 
