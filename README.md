@@ -213,7 +213,7 @@ For full proteomics analysis pipelines, consider [FragPipe](https://fragpipe.nes
 - Browser/server memory considerations
 - Tested mzML variants/instruments
 
-This tool was developed with AI-assisted coding (Claude Code); the tool design, analysis workflows, and statistical logic are my own.
+This tool was developed with Claude Code; the tool design, analysis workflows, and statistical logic are my own.
 
 ---
 
